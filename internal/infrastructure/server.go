@@ -3,6 +3,7 @@ package server
 import (
 	"Go_Commerce/internal/infrastructure/config"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -15,7 +16,7 @@ func NewServer(
 ) *http.Server {
 
 	srv := &http.Server{
-		Addr:    c.AppPort,
+		Addr:    fmt.Sprintf(":%d", c.AppPort),
 		Handler: http.DefaultServeMux,
 	}
 
