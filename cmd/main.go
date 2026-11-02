@@ -2,8 +2,11 @@ package main
 
 import (
 	"Go_Commerce/internal/infrastructure/config"
+	"Go_Commerce/internal/infrastructure/database"
 	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/infrastructure/server"
+	"context"
+	"fmt"
 
 	"go.uber.org/fx"
 )
@@ -14,7 +17,12 @@ func main() {
 			config.Load,
 			logger.NewLogger,
 			server.NewServer,
+			database.New,
+			
 		),
+		fx.Invoke(func(db *database.Postgres){
+			fmt.Println("Database connection established:", db.DB)
+		}),
 	)
 	app.Run()
 }
