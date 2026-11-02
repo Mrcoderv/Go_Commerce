@@ -5,7 +5,6 @@ import (
 	"Go_Commerce/internal/infrastructure/database"
 	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/infrastructure/server"
-	"context"
 	"fmt"
 
 	"go.uber.org/fx"
@@ -17,10 +16,9 @@ func main() {
 			config.Load,
 			logger.NewLogger,
 			server.NewServer,
-			database.New,
-			
+			database.NewFx,
 		),
-		fx.Invoke(func(db *database.Postgres){
+		fx.Invoke(func(db *database.Postgres) {
 			fmt.Println("Database connection established:", db.DB)
 		}),
 	)
