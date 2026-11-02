@@ -1,8 +1,9 @@
 package outgoing
 
 import (
-	"Go_Commerce/internal/domain/product"
 	"context"
+
+	"github.com/Mrcoderv/Go_Commerce/internal/domain/product"
 )
 
 type ProductRepository interface {
