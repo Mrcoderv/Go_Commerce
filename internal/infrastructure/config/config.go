@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	AppEnv    string
-	AppPort   int
+	AppPort   string
 	LogLevel  string
 	TestDBURL string
 
