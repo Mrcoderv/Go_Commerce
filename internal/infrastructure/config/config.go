@@ -2,11 +2,10 @@ package config
 
 import (
 	"fmt"
+	"github.com/joho/godotenv"
 	"os"
 	"strconv"
 	"strings"
-	"time"
-	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -15,17 +14,17 @@ type Config struct {
 	LogLevel  string
 	TestDBURL string
 
-	DB_Host     string
-	DB_Port     int
-	DB_User     string
-	DB_Password string
-	DB_Name     string
-	DB_SSLMode  string
+	DBHost     string
+	DBPort     int
+	DBUser     string
+	DBPassword string
+	DBName     string
+	DBSSLMode  string
 }
 
 // DSN builds a PostgreSQL connection string from the DB config.
 func (c Config) DSN() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", c.DB_User, c.DB_Password, c.DB_Host, c.DB_Port, c.DB_Name, c.DB_SSLMode)
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName, c.DBSSLMode)
 }
 
 func Load() (*Config, error) {
@@ -42,20 +41,17 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	return &Config{
-		AppEnv:    getString("APP_ENV", "development"),
-		AppPort:   appPort,
-		LogLevel:  getString("LOG_LEVEL", "info"),
-		TestDBURL: getString("TEST_DATABASE_URL", ""),
-		DB_Host:    getString("DB_HOST", "localhost"),
-		DB_Port:    dbPort,
-		DB_User:    getString("DB_USER", "postgres"),
-		DB_Password: getString("DB_PASSWORD", ""),
-		DB_Name:    getString("DB_NAME", "postgres"),
-		DB_SSLMode: getString("DB_SSLMODE", "disable"),
+		AppEnv:     getString("APP_ENV", "development"),
+		AppPort:    appPort,
+		LogLevel:   getString("LOG_LEVEL", "info"),
+		TestDBURL:  getString("TEST_DATABASE_URL", ""),
+		DBHost:     getString("DB_HOST", "localhost"),
+		DBPort:     dbPort,
+		DBUser:     getString("DB_USER", "postgres"),
+		DBPassword: getString("DB_PASSWORD", ""),
+		DBName:     getString("DB_NAME", "postgres"),
+		DBSSLMode:  getString("DB_SSLMODE", "disable"),
 	}, nil
-}
-func LoadConfig() (*Config, error) {
-	return Load()
 }
 
 func getString(key, def string) string {
@@ -75,16 +71,4 @@ func getInt(key string, def int) (int, error) {
 		return 0, fmt.Errorf("config: %s must be an integer: %w", key, err)
 	}
 	return i, nil
-}
-
-func getDuration(key string, def time.Duration) (time.Duration, error) {
-	v := getString(key, "")
-	if v == "" {
-		return def, nil
-	}
-	d, err := time.ParseDuration(v)
-	if err != nil {
-		return 0, fmt.Errorf("config: %s must be a valid duration: %w", key, err)
-	}
-	return d, nil
 }

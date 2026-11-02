@@ -7,6 +7,3 @@ type Seller struct {
 	Phone    int64  `json:"phone"`
 	Address  string `json:"address"`
 }
-
-
-
