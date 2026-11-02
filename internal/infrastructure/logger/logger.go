@@ -28,6 +28,17 @@ func NewLogger(cfg *config.Config) Logger { // this read and return the logger b
 		Level: level,
 	})
 
+	//options := &slog.HandlerOptions{
+	//	Level: level,
+	//}
+	//
+	//var handler slog.Handler
+	//
+	//if cfg.Environment == "production" {
+	//	handler = slog.NewJSONHandler(os.Stdout, options)
+	//} else {
+	//	handler = slog.NewTextHandler(os.Stdout, options)
+	//}
 	return &sloglogger{
 		logger: slog.New(handler),
 	}
