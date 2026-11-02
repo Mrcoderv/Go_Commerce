@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	AppEnv    string
-	AppPort   int
+	AppPort   string
 	LogLevel  string
 	TestDBURL string
 
@@ -37,16 +37,16 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	return &Config{
-		AppEnv:    getString("APP_ENV", "development"),
-		AppPort:   appPort,
-		LogLevel:  getString("LOG_LEVEL", "info"),
-		TestDBURL: getString("TEST_DB_URL", ""),
-		DB_Host:    getString("DB_HOST", "localhost"),
-		DB_Port:    dbPort,
-		DB_User:    getString("DB_USER", "postgres"),
+		AppEnv:      getString("APP_ENV", "development"),
+		AppPort:     appPort,
+		LogLevel:    getString("LOG_LEVEL", "info"),
+		TestDBURL:   getString("TEST_DB_URL", ""),
+		DB_Host:     getString("DB_HOST", "localhost"),
+		DB_Port:     dbPort,
+		DB_User:     getString("DB_USER", "postgres"),
 		DB_Password: getString("DB_PASSWORD", ""),
-		DB_Name:    getString("DB_NAME", "postgres"),
-		DB_SSLMode: getString("SSL_MODE", "disable"),
+		DB_Name:     getString("DB_NAME", "postgres"),
+		DB_SSLMode:  getString("SSL_MODE", "disable"),
 	}, nil
 }
 func LoadConfig() (*Config, error) {
