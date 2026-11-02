@@ -38,5 +38,6 @@ Go_Commerce/
 ├── migrations/  001_sellers_products.sql, 002_buyers_orders.sql
 ├── tests/       (integration tests)
 └── docs/decisions.md
-
+![alt text](image.png)
+![alt text](image-1.png)
 [README.md](README.md).
