@@ -4,6 +4,8 @@ go 1.27.0
 
 require (
 	github.com/jackc/pgx/v5 v5.12.0
+	github.com/danielgtaylor/huma/v2 v2.40.0
+	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
 	go.uber.org/fx v1.24.0
 )
@@ -18,4 +20,10 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/text v0.41.0 // indirect
+	github.com/golang-migrate/migrate/v4 v4.20.1 // indirect
+	github.com/lib/pq v1.12.3 // indirect
+	go.uber.org/dig v1.19.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
+	go.uber.org/zap v1.26.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 )
