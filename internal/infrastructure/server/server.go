@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
+	nethttp "net/http"
 
 	"go.uber.org/fx"
 )
@@ -13,18 +13,19 @@ import (
 func NewServer(
 	lc fx.Lifecycle,
 	cfg *config.Config,
-) *http.Server {
+	handler nethttp.Handler,
+) *nethttp.Server {
 
-	srv := &http.Server{
+	srv := &nethttp.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.AppPort),
-		Handler: http.DefaultServeMux,
+		Handler: handler,
 	}
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {
 				if err := srv.ListenAndServe(); err != nil &&
-					err != http.ErrServerClosed {
+					err != nethttp.ErrServerClosed {
 					log.Printf("HTTP server error: %v", err)
 				}
 			}()
