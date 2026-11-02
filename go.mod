@@ -2,6 +2,7 @@ module Go_Commerce
 
 go 1.27.0
 
+require github.com/joho/godotenv v1.5.1 // indirect
 require (
 	go.uber.org/dig v1.19.0 // indirect
 	go.uber.org/fx v1.24.0 // indirect
