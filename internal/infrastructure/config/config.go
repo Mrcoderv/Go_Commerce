@@ -2,15 +2,16 @@ package config
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
 	AppEnv    string
-	AppPort   string
+	AppPort   int
 	LogLevel  string
 	TestDBURL string
 
