@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -28,7 +29,11 @@ func (c Config) DSN() string {
 }
 
 func Load() (*Config, error) {
-	appPort, err := getInt("PORT", 8080)
+	err := godotenv.Load()
+	if err != nil {
+		return nil, fmt.Errorf("error loading .env file: %w", err)
+	}
+	appPort, err := getInt("APP_PORT", 8080)
 	if err != nil {
 		return nil, err
 	}
@@ -40,13 +45,13 @@ func Load() (*Config, error) {
 		AppEnv:    getString("APP_ENV", "development"),
 		AppPort:   appPort,
 		LogLevel:  getString("LOG_LEVEL", "info"),
-		TestDBURL: getString("TEST_DB_URL", ""),
+		TestDBURL: getString("TEST_DATABASE_URL", ""),
 		DB_Host:    getString("DB_HOST", "localhost"),
 		DB_Port:    dbPort,
 		DB_User:    getString("DB_USER", "postgres"),
 		DB_Password: getString("DB_PASSWORD", ""),
 		DB_Name:    getString("DB_NAME", "postgres"),
-		DB_SSLMode: getString("SSL_MODE", "disable"),
+		DB_SSLMode: getString("DB_SSLMODE", "disable"),
 	}, nil
 }
 func LoadConfig() (*Config, error) {
