@@ -9,3 +9,5 @@ type Product_Manipulation interface {
 	Update(product Product) error
 	Delete(id int64) error
 }
+
+
