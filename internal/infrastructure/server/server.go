@@ -12,11 +12,11 @@ import (
 
 func NewServer(
 	lc fx.Lifecycle,
-	c config.Config,
+	cfg *config.Config,
 ) *http.Server {
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", c.AppPort),
+		Addr:    fmt.Sprintf(":%d", cfg.AppPort),
 		Handler: http.DefaultServeMux,
 	}
 
