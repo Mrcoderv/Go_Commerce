@@ -19,12 +19,7 @@ type Handler struct{}
 func (h *Handler) Health(ctx context.Context, input *HealthInput) (*HealthOutput, error) {
 	return &HealthOutput{
 		Body: HealthResponse{
-			Status: "health is good  200 ok ",
+			Status: "health is good",
 		},
 	}, nil
 }
-
-
-
-
-
