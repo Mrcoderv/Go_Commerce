@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -29,9 +30,10 @@ func (c Config) DSN() string {
 }
 
 func Load() (*Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, fmt.Errorf("error loading .env file: %w", err)
+	if err := godotenv.Load(); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("config: loading .env: %w", err)
+		}
 	}
 	appPort, err := getInt("APP_PORT", 8080)
 	if err != nil {
