@@ -40,5 +40,5 @@ func (s *OrderService) UpdateStatus(ctx context.Context, id int64, next order.St
 }
 
 func (s *OrderService) Cancel(ctx context.Context, id int64) error {
-	return s.repo.UpdateStatus(ctx, id, order.Status{})
+	return s.repo.UpdateStatus(ctx, id, order.Status(""))
 }
