@@ -11,7 +11,7 @@ type sloglogger struct { /// for te dependency ininversion = no direct dependent
 	logger *slog.Logger
 }
 
-func NewLogger(cfg *config.Config) Logger { // this read and return the logger based on the config
+func New(cfg *config.Config) Logger { // this read and return the logger based on the config
 	var level slog.Level
 	switch cfg.LogLevel {
 	case "debug":
@@ -24,23 +24,19 @@ func NewLogger(cfg *config.Config) Logger { // this read and return the logger b
 		level = slog.LevelInfo
 	}
 
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	options := &slog.HandlerOptions{  // only accepet the  logger that is same to lavel
 		Level: level,
-	})
+	}
 
-	//options := &slog.HandlerOptions{
-	//	Level: level,
-	//}
-	//
-	//var handler slog.Handler
-	//
-	//if cfg.Environment == "production" {
-	//	handler = slog.NewJSONHandler(os.Stdout, options)
-	//} else {
-	//	handler = slog.NewTextHandler(os.Stdout, options)
-	//}
-	return &sloglogger{
-		logger: slog.New(handler),
+	var h slog.Handler 
+
+	if cfg.AppEnv == "production" {
+		h = slog.NewJSONHandler(os.Stdout, options)   // give the json format for the production env and the text format for the dev env
+	} else {
+		h = slog.NewTextHandler(os.Stdout, options)
+	}
+	return &sloglogger{   
+		logger: slog.New(h),  // log data is send .
 	}
 }
 
@@ -76,3 +72,7 @@ var _ Logger = (*sloglogger)(nil) // checking the import and throwing error if n
 // and throwing the massage and then we have the struct that the struct
 //  that is used ofr the wrapping the dirct depencdent so that new logger is
 //  ued to read and handle the logger based oon the config
+
+func NewLogger(cfg *config.Config) Logger {
+	return New(cfg)
+}
