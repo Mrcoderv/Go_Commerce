@@ -4,7 +4,11 @@ import (
 	"time"
 )
 
-type Order struct {
+//type status string{
+//
+//}
+
+type Status struct {
 	Order_ID   int64     `json:"id"`
 	SellerID   int64     `json:"seller_id"`
 	buyerID    int64     `json:"buyer_id"`

@@ -10,15 +10,9 @@ type OrderRepository interface {
 	GetByID(ctx context.Context, id int64) (order.Order, error)
 	ListByBuyer(ctx context.Context, buyerID int64, limit, offset int) ([]order.Order, error)
 	ListBySeller(ctx context.Context, sellerID int64, limit, offset int) ([]order.Order, error)
-	UpdateStatus(ctx context.Context, id int64, status order.Status) error
-}
+	UpdateStatus(ctx context.Context, id int64, order.Status string) error ()
+OrderOwn(ctx context.Context, id int64, order.Status string) error()type status string{
 
-type OrderCatalog interface {
-	Snapshot(ctx context.Context, productID int64, qty int) (ProductSnapshot, error)
-	ReduceStock(ctx context.Context, productID int64, qty int) error
-	RestoreStock(ctx context.Context, productID int64, qty int) error
 }
-
-type OrderBuyerLookup interface {
-	Exists(ctx context.Context, buyerID int64) (bool, error)
+}
 }

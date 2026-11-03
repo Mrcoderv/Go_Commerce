@@ -41,3 +41,18 @@ Go_Commerce/
 ![alt text](image.png)
 ![alt text](image-1.png)
 [README.md](README.md).
+
+
+
+
+// interface that are we using 
+| Interface | Location | What it has | Used for |
+|---|---|---|---|
+| **BuyerService** | `ports/incoming/buyer.go` | `Register`, `GetByID`, `Update`, `Delete` | HTTP handlers call it, so they can be built and tested with a fake |
+| **OrderService** | `ports/incoming/order.go` | `PlaceOrder`, `GetByID`, `ListByBuyer`, `ListBySeller`, `UpdateStatus`, `Cancel` | Public contract of the Order module |
+| **BuyerRepository** | `ports/outgoing/buyer_repo.go` | `Create`, `GetByID`, `GetByEmail`, `Update`, `Delete` | Lets the Buyer service be tested without a database |
+| **OrderRepository** | `ports/outgoing/order_repo.go` | `Create`, `GetByID`, `ListByBuyer`, `ListBySeller`, `UpdateStatus` | Saves the order and its items in one call |
+| **ProductRepository** (A's) | `ports/outgoing/product_repo.go` | `GetByID`, `DecreaseStock`, `IncreaseStock` | Reads price and changes stock; your only dependency on A |
+| **TxManager** (A's) | `ports/outgoing/tx_manager.go` | `WithinTx(ctx, fn)` | Makes stock reduction and order save succeed or fail together |
+
+You write the first four. The last two are A's, so use fakes until they land.
