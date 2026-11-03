@@ -24,3 +24,4 @@ go run ./cmd/main.go  (should print "Database connection established")
 Verify tables:
 psql -h localhost -U postgres -d go_commerce -c "\dt" 
 
+ghjkl
