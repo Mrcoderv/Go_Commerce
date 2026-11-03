@@ -1,8 +1,8 @@
 package incoming
 
 import (
-	"context"
 	"Go_Commerce/internal/domain/order"
+	"context"
 )
 
 type OrderItemInput struct {
@@ -11,8 +11,9 @@ type OrderItemInput struct {
 }
 
 type PlaceOrderInput struct {
-	BuyerID int64
-	Items   []OrderItemInput
+	ProductID int64
+	BuyerID   int64
+	Items     []OrderItemInput
 }
 
 type OrderService interface {
