@@ -32,13 +32,4 @@ func (s *OrderService) ListBySeller(ctx context.Context, sellerID int64, f incom
 	return s.repo.ListBySeller(ctx, sellerID, f.Limit, f.Offset)
 }
 
-func (s *OrderService) UpdateStatus(ctx context.Context, id int64, next order.Status) (order.Order, error) {
-	if err := s.repo.UpdateStatus(ctx, id, next); err != nil {
-		return order.Order{}, err
-	}
-	return s.repo.GetByID(ctx, id)
-}
 
-func (s *OrderService) Cancel(ctx context.Context, id int64) error {
-	return s.repo.UpdateStatus(ctx, id, order.Status{})
-}
