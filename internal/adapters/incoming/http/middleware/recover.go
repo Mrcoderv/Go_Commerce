@@ -1,16 +1,17 @@
 package middleware
 
 import (
+	"log/slog"
 	"net/http"
-
-	"github.com/danielgtaylor/huma/v2"
 )
 
 func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				huma.WriteError(w, r, http.StatusInternalServerError, "Internal Server Error")
+				slog.Info("Recovered from", slog.Any("error", err))
+				w.WriteHeader(http.StatusInternalServerError)
+				
 			}
 		}()
 		next.ServeHTTP(w, r)
