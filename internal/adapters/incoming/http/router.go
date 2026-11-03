@@ -11,13 +11,11 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// New builds a Huma-powered HTTP handler. It registers GET /health (returns 200)
-// and exposes the OpenAPI spec at /openapi.json plus the docs UI at /docs.
 func New(cfg *config.Config) nethttp.Handler {
 	r := mux.NewRouter()
 	adapter := humamux.NewAdapter(r)
 
-	humaCfg := huma.DefaultConfig("Go Commerce API", "1.0.0")
+	humaCfg := huma.DefaultConfig("this is the go defult  ", "99.99")
 	humaCfg.OpenAPIPath = "/openapi"
 	humaCfg.DocsPath = "/docs"
 
@@ -29,6 +27,22 @@ func New(cfg *config.Config) nethttp.Handler {
 		Path:        "/health",
 		Summary:     "Check API health",
 	}, (&handlers.Handler{}).Health)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-order",
+		Method:      nethttp.MethodGet,
+		Path:        "/orders/{id}",
+		Summary:     "Get order by ID",
+	}, (&handlers.OrderHandler{}).GetOrder)
+	//huma.Register (api, huma.Operation{
+	//	OperationID: "create-order",
+	//	Method:      nethttp.MethodGet,
+	//	Path:        "/orders/{id}",
+	//	Summary:     "Post order by ID",
+	//}, (&handlers.OrderHandler{}).PostOrder)
+	//
+	//
+	//
 
 	return r
 }

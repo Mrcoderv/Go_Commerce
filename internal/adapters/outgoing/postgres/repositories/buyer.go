@@ -1,0 +1,79 @@
+package repositories
+
+import (
+	"context"
+	"database/sql"
+	"time"
+
+	"Go_Commerce/internal/domain/buyer"
+)
+
+type BuyerRepository struct {
+	db *sql.DB
+}
+
+func NewBuyerRepository(db *sql.DB) *BuyerRepository {
+	return &BuyerRepository{db: db}
+}
+
+func (r *BuyerRepository) Create(ctx context.Context, b buyer.Buyer) (buyer.Buyer, error) {
+	now := time.Now()
+	if b.CreatedAt.IsZero() {
+		b.CreatedAt = now
+	}
+	query := `INSERT INTO buyers (name, email, phone, address, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	err := r.db.QueryRowContext(ctx, query, b.Name, b.Email, b.Phone, b.Address, b.CreatedAt, now).Scan(&b.ID)
+	if err != nil {
+		return buyer.Buyer{}, err
+	}
+	return b, nil
+}
+
+func (r *BuyerRepository) GetByID(ctx context.Context, id int64) (buyer.Buyer, error) {
+	b := buyer.Buyer{}
+	query := `SELECT id, name, email, phone, address, created_at, deleted_at FROM buyers WHERE id = $1`
+	var deletedAt sql.NullTime
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&b.ID, &b.Name, &b.Email, &b.Phone, &b.Address, &b.CreatedAt, &deletedAt)
+	if err != nil {
+		return buyer.Buyer{}, err
+	}
+	if deletedAt.Valid {
+		t := deletedAt.Time
+		b.DeletedAt = &t
+	}
+	return b, nil
+}
+
+func (r *BuyerRepository) GetByEmail(ctx context.Context, email string) (buyer.Buyer, error) {
+	b := buyer.Buyer{}
+	query := `SELECT id, name, email, phone, address, created_at, deleted_at FROM buyers WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL`
+	var deletedAt sql.NullTime
+	err := r.db.QueryRowContext(ctx, query, email).Scan(&b.ID, &b.Name, &b.Email, &b.Phone, &b.Address, &b.CreatedAt, &deletedAt)
+	if err != nil {
+		return buyer.Buyer{}, err
+	}
+	if deletedAt.Valid {
+		t := deletedAt.Time
+		b.DeletedAt = &t
+	}
+	return b, nil
+}
+
+func (r *BuyerRepository) Update(ctx context.Context, b buyer.Buyer) (buyer.Buyer, error) {
+	query := `UPDATE buyers SET name = $1, email = $2, phone = $3, address = $4, updated_at = NOW() WHERE id = $5 RETURNING id, name, email, phone, address, created_at, deleted_at`
+	var deletedAt sql.NullTime
+	err := r.db.QueryRowContext(ctx, query, b.Name, b.Email, b.Phone, b.Address, b.ID).Scan(&b.ID, &b.Name, &b.Email, &b.Phone, &b.Address, &b.CreatedAt, &deletedAt)
+	if err != nil {
+		return buyer.Buyer{}, err
+	}
+	if deletedAt.Valid {
+		t := deletedAt.Time
+		b.DeletedAt = &t
+	}
+	return b, nil
+}
+
+func (r *BuyerRepository) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE buyers SET deleted_at = NOW() WHERE id = $1`, id)
+	return err
+}
