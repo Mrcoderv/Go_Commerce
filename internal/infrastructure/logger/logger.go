@@ -24,19 +24,19 @@ func New(cfg *config.Config) Logger { // this read and return the logger based o
 		level = slog.LevelInfo
 	}
 
-	options := &slog.HandlerOptions{  // only accepet the  logger that is same to lavel
+	options := &slog.HandlerOptions{ // only accepet the  logger that is same to lavel
 		Level: level,
 	}
 
-	var h slog.Handler 
+	var h slog.Handler
 
 	if cfg.AppEnv == "production" {
-		h = slog.NewJSONHandler(os.Stdout, options)   // give the json format for the production env and the text format for the dev env
+		h = slog.NewJSONHandler(os.Stdout, options) // give the json format for the production env and the text format for the dev env
 	} else {
 		h = slog.NewTextHandler(os.Stdout, options)
 	}
-	return &sloglogger{   
-		logger: slog.New(h),  // log data is send .
+	return &sloglogger{
+		logger: slog.New(h), // log data is send .
 	}
 }
 

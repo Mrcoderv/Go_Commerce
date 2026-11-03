@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS products (
     id         BIGSERIAL    PRIMARY KEY,
     seller_id BIGINT       NOT NULL REFERENCES sellers (id) ON DELETE RESTRICT,
     product_name VARCHAR(255) NOT NULL,
+    product_description TEXT NOT NULL DEFAULT '',
+    stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
     unit_price BIGINT       NOT NULL CHECK (unit_price >= 0), -- paisa
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
