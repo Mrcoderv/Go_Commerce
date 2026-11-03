@@ -11,7 +11,7 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 			if err := recover(); err != nil {
 				slog.Info("Recovered from", slog.Any("error", err))
 				w.WriteHeader(http.StatusInternalServerError)
-				
+
 			}
 		}()
 		next.ServeHTTP(w, r)
