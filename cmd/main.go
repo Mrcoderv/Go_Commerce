@@ -20,8 +20,8 @@ func main() {
 			logger.NewLogger,
 			http.New,
 			server.NewServer,
-			database.NewFx,
 		),
+		database.Module,
 		fx.Invoke(func(db *database.Postgres) {
 			fmt.Println("Database connection established:", db.DB)
 		}),
