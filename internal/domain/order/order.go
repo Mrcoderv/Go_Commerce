@@ -7,6 +7,7 @@ type Order struct {
 	BuyerID   int64     `json:"buyer_id"`
 	ProductID int64     `json:"product_id"`
 	Total     int64     `json:"total"` // paisa
+	Status    Status    `json:"status"`
 	Items     []Item    `json:"items"`
 	CreatedAt time.Time `json:"created_at"`
 }
