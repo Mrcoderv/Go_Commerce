@@ -9,3 +9,5 @@ var (
 	ErrInvalidInput       = errors.New("invalid input")
 	ErrInvalidTransaction = errors.New("invalid transaction")
 )
+
+var ErrInvalidTransition = errors.New("invalid status transition")
