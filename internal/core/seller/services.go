@@ -48,7 +48,17 @@ func (s *SellerService) Delete(ctx context.Context, id int64) error {
 }
 
 func (s *SellerService) List(ctx context.Context, f incoming.ListFilter) ([]seller.Seller, error) {
-	return s.repo.List(ctx, f.Limit, f.Offset)
+	limit, offset := f.Limit, f.Offset
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.repo.List(ctx, limit, offset)
 }
 func (s *SellerService) Update(ctx context.Context, id int64, in incoming.UpdateSellerInput) (seller.Seller, error) {
 	current, err := s.repo.GetByID(ctx, id)
