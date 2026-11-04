@@ -1,29 +1,28 @@
 package repositories
 
 import (
+	"Go_Commerce/internal/domain/order"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"time"
-
-	"Go_Commerce/internal/domain/order"
 )
 
-type OrderRepository struct {
+type OrderHandler struct {
 	db *sql.DB
 }
 
 func NewOrderHandler(service incoming.OrderService) *OrderHandler {
-	return &OrderHandler{Service: service}
+	return nil
 }
 
-func NewOrderRepository(db *sql.DB) *OrderRepository {
-	return &OrderRepository{db: db}
+func NewOrderRepository(db *sql.DB) *OrderHandler {
+	return &OrderHandler{db: db}
 }
 
-func (r *OrderRepository) Create(ctx context.Context, o order.Order) (order.Order, error) {
+func (r *OrderHandler) Create(ctx context.Context, o order.Order) (order.Order, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return o, err
@@ -69,7 +68,7 @@ func (r *OrderRepository) Create(ctx context.Context, o order.Order) (order.Orde
 	return o, nil
 }
 
-func (r *OrderRepository) GetByID(ctx context.Context, id int64) (order.Order, error) {
+func (r *OrderHandler) GetByID(ctx context.Context, id int64) (order.Order, error) {
 	var o order.Order
 	var status string
 
@@ -95,7 +94,7 @@ func (r *OrderRepository) GetByID(ctx context.Context, id int64) (order.Order, e
 	return o, nil
 }
 
-func (r *OrderRepository) loadItems(ctx context.Context, orderID int64) ([]order.Item, error) {
+func (r *OrderHandler) loadItems(ctx context.Context, orderID int64) ([]order.Item, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, order_id, product_id, seller_id, product_name, unit_price, quantity
 		 FROM order_items WHERE order_id = $1`,
@@ -124,7 +123,7 @@ func (r *OrderRepository) loadItems(ctx context.Context, orderID int64) ([]order
 	return items, rows.Err()
 }
 
-func (r *OrderRepository) ListByBuyer(ctx context.Context, buyerID int64, limit, offset int) ([]order.Order, error) {
+func (r *OrderHandler) ListByBuyer(ctx context.Context, buyerID int64, limit, offset int) ([]order.Order, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, buyer_id, status, total_amount, created_at
 		 FROM orders WHERE buyer_id = $1
@@ -139,7 +138,7 @@ func (r *OrderRepository) ListByBuyer(ctx context.Context, buyerID int64, limit,
 	return r.scanOrders(ctx, rows)
 }
 
-func (r *OrderRepository) ListBySeller(ctx context.Context, sellerID int64, limit, offset int) ([]order.Order, error) {
+func (r *OrderHandler) ListBySeller(ctx context.Context, sellerID int64, limit, offset int) ([]order.Order, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT DISTINCT o.id, o.buyer_id, o.status, o.total_amount, o.created_at
 		 FROM orders o
@@ -156,7 +155,7 @@ func (r *OrderRepository) ListBySeller(ctx context.Context, sellerID int64, limi
 	return r.scanOrders(ctx, rows)
 }
 
-func (r *OrderRepository) scanOrders(ctx context.Context, rows *sql.Rows) ([]order.Order, error) {
+func (r *OrderHandler) scanOrders(ctx context.Context, rows *sql.Rows) ([]order.Order, error) {
 	var orders []order.Order
 
 	for rows.Next() {
@@ -181,7 +180,7 @@ func (r *OrderRepository) scanOrders(ctx context.Context, rows *sql.Rows) ([]ord
 	return orders, rows.Err()
 }
 
-func (r *OrderRepository) UpdateStatus(ctx context.Context, id int64, status order.Status) error {
+func (r *OrderHandler) UpdateStatus(ctx context.Context, id int64, status order.Status) error {
 	response, err := r.db.ExecContext(ctx,
 		`UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`,
 		status, id,
