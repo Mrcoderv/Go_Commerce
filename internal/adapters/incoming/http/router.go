@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func New(cfg *config.Config, buyerH *handlers.BuyerHandler, sellerHandler *handlers.SellerHandler, orderH *handlers.OrderHandler) nethttp.Handler {
+func New(cfg *config.Config, buyerH *handlers.BuyerHandler, sellerHandler *handlers.SellerHandler, productHandler *handlers.ProductHandler, orderH *handlers.OrderHandler) nethttp.Handler {
 	r := mux.NewRouter()
 	adapter := humamux.NewAdapter(r)
 
@@ -99,6 +99,22 @@ huma.Register(api, huma.Operation{
 	DefaultStatus: nethttp.StatusNoContent,
 	Tags:          []string{"Sellers"},
 }, sellerHandler.Delete)
+huma.Register(api, huma.Operation{
+	OperationID:   "create-product",
+	Method:        nethttp.MethodPost,
+	Path:          "/products",
+	Summary:       "Create a product",
+	DefaultStatus: nethttp.StatusCreated,
+	Tags:          []string{"Products"},
+}, productHandler.Create)
+
+huma.Register(api, huma.Operation{
+	OperationID: "get-product",
+	Method:      nethttp.MethodGet,
+	Path:        "/products/{id}",
+	Summary:     "Get a product by ID",
+	Tags:        []string{"Products"},
+}, productHandler.GetByID)
 
 	return r
 }
