@@ -115,6 +115,30 @@ huma.Register(api, huma.Operation{
 	Summary:     "Get a product by ID",
 	Tags:        []string{"Products"},
 }, productHandler.GetByID)
+huma.Register(api, huma.Operation{
+	OperationID: "list-products",
+	Method:      nethttp.MethodGet,
+	Path:        "/products",
+	Summary:     "List products",
+	Tags:        []string{"Products"},
+}, productHandler.List)
+
+huma.Register(api, huma.Operation{
+	OperationID: "update-product",
+	Method:      nethttp.MethodPatch,
+	Path:        "/products/{id}",
+	Summary:     "Update a product (owner only)",
+	Tags:        []string{"Products"},
+}, productHandler.Update)
+
+huma.Register(api, huma.Operation{
+	OperationID:   "delete-product",
+	Method:        nethttp.MethodDelete,
+	Path:          "/products/{id}",
+	Summary:       "Delete a product (owner only)",
+	DefaultStatus: nethttp.StatusNoContent,
+	Tags:          []string{"Products"},
+}, productHandler.Delete)
 
 	return r
 }
