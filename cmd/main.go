@@ -27,9 +27,8 @@ func main() {
 			http.New,
 			server.NewServer,
 
-			// Developer A's part (unchanged for now)
-			seller.NewSellerService,
 			memory.NewSellerRepo,
+			fx.Annotate(memory.NewSellerRepo, fx.As(new(outgoing.SellerRepository))),
 
 			// Buyer and order: repositories (bound to their port interfaces)
 			fx.Annotate(repositories.NewBuyerRepository, fx.As(new(outgoing.BuyerRepository))),
@@ -45,7 +44,7 @@ func main() {
 		database.Module,
 		buyer.Module, // incomming buyer modue
 		order.Module, // incomming order module
-
+		seller.Module,
 		fx.Invoke(func(srv *nethttp.Server) {}),
 	)
 	app.Run()
