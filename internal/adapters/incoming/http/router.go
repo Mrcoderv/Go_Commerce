@@ -58,5 +58,14 @@ func New(cfg *config.Config, buyerH *handlers.BuyerHandler, orderH *handlers.Ord
 		DefaultStatus: nethttp.StatusNoContent,
 	}, buyerH.Delete)
 
+	huma.Register(api, huma.Operation{
+	OperationID:   "register-seller",
+	Method:        nethttp.MethodPost,
+	Path:          "/sellers",
+	Summary:       "Register a seller",
+	DefaultStatus: nethttp.StatusCreated,
+	Tags:          []string{"Sellers"},
+}, sellerHandler.Register)
+
 	return r
 }

@@ -37,6 +37,7 @@ func main() {
 			// Buyer and order: handlers
 			handlers.NewBuyerHandler,
 			handlers.NewOrderHandler,
+			handlers.NewSellerHandler,
 		),
 		database.Module,
 		buyer.Module, // provides incoming.BuyerService
