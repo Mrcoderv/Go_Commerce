@@ -30,12 +30,10 @@ func (s *BuyerService) Register(
         return buyer.Buyer{}, buyer.ErrInvalidInput
     }
 
-    // Check whether the email is valid
     if _, err := mail.ParseAddress(email); err != nil {
         return buyer.Buyer{}, buyer.ErrInvalidInput
     }
-
-    // Check if a buyer with this email already exists
+	// alredy exist email
     existingBuyer, err := s.repo.GetByEmail(ctx, email)
     if err == nil && existingBuyer.ID != 0 {
         return buyer.Buyer{}, buyer.ErrEmailAlreadyExists
