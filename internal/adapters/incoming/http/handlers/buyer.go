@@ -53,7 +53,7 @@ func (h *BuyerHandler) Get(ctx context.Context, req *GetBuyerRequest) (*BuyerRes
 	out, err := h.service.GetByID(ctx, req.ID)
 
 	if err != nil {
-		return nil, mapSellerError(err)
+		return nil, mapBuyerError()
 
 	}
 	return &BuyerResponse{Body: out}, nil
