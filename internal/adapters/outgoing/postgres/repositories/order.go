@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"Go_Commerce/internal/ports/incoming"
 	"context"
 	"database/sql"
 	"errors"
@@ -12,6 +13,10 @@ import (
 
 type OrderRepository struct {
 	db *sql.DB
+}
+
+func NewOrderHandler(service incoming.OrderService) *OrderHandler {
+	return &OrderHandler{Service: service}
 }
 
 func NewOrderRepository(db *sql.DB) *OrderRepository {

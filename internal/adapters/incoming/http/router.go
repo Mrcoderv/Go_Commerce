@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func New(cfg *config.Config) nethttp.Handler {
+func New(cfg *config.Config, buyerH *handlers.BuyerHandler, orderH *handlers.OrderHandler) nethttp.Handler {
 	r := mux.NewRouter()
 	adapter := humamux.NewAdapter(r)
 
@@ -29,12 +29,34 @@ func New(cfg *config.Config) nethttp.Handler {
 	}, (&handlers.Handler{}).Health)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "get-order",
-		Method:      nethttp.MethodGet,
-		Path:        "/orders/{id}",
-		Summary:     "Get order by ID",
-	}, (&handlers.OrderHandler{}).GetOrder)
+		OperationID:   "register-buyer",
+		Method:        nethttp.MethodPost,
+		Path:          "/buyers",
+		Summary:       "Register a buyer",
+		DefaultStatus: nethttp.StatusCreated,
+	}, buyerH.Register)
 
+	huma.Register(api, huma.Operation{
+		OperationID: "get-buyer",
+		Method:      nethttp.MethodGet,
+		Path:        "/buyers/{id}",
+		Summary:     "Get buyer by ID",
+	}, buyerH.Get)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "update-buyer",
+		Method:      nethttp.MethodPatch,
+		Path:        "/buyers/{id}",
+		Summary:     "Update a buyer (only the fields you send)",
+	}, buyerH.Update)
+
+	huma.Register(api, huma.Operation{
+		OperationID:   "delete-buyer",
+		Method:        nethttp.MethodDelete,
+		Path:          "/buyers/{id}",
+		Summary:       "Delete a buyer",
+		DefaultStatus: nethttp.StatusNoContent,
+	}, buyerH.Delete)
 
 	return r
 }
