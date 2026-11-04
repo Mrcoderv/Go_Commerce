@@ -1,17 +1,16 @@
 package product
 
 import (
-	"context"
 	"Go_Commerce/internal/domain/product"
-	"Go_Commerce/internal/ports/incoming"
 	"Go_Commerce/internal/ports/outgoing"
+	"context"
 )
 
 type ProductService struct {
 	repo outgoing.ProductRepository
 }
 
-func NewProductService(repo outgoing.ProductRepository) * ProductService {
+func NewProductService(repo outgoing.ProductRepository) *ProductService {
 	return &ProductService{repo: repo}
 }
 

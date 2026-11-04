@@ -36,10 +36,7 @@ func (p *Postgres) Ping(ctx context.Context) error {
 func (p *Postgres) Close() {
 	p.DB.Close()
 }
-
-// NewFx is the constructor Fx calls. It ties ping and close to the app lifecycle.
 func NewFx(lc fx.Lifecycle, cfg *config.Config) (*Postgres, error) {
-	// context.Background(), not the hook's ctx: the pool must outlive startup.
 	db, err := New(context.Background(), cfg)
 	if err != nil {
 		return nil, err
@@ -48,7 +45,7 @@ func NewFx(lc fx.Lifecycle, cfg *config.Config) (*Postgres, error) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			if err := db.Ping(ctx); err != nil {
-				db.Close() // don't leak the pool if startup fails
+				db.Close()
 				return err
 			}
 			return nil

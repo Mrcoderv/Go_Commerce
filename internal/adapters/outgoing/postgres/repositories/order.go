@@ -11,7 +11,7 @@ import (
 type OrderRepository struct {
 	db *sql.DB
 }
-
++
 func NewOrderRepository(db *sql.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
@@ -45,7 +45,7 @@ func (r *OrderRepository) Create(ctx context.Context, o order.Order) (order.Orde
 		o.Items[i].OrderID = o.ID
 
 		err = tx.QueryRowContext(ctx,
-			`INSERT INTO order_items (order_id, product_id, seller_id, product_name, unit_price, quantity)
+			`INSERT INTO order_items (order_id, seller_id, product_name, unit_price, quantity)
 			 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
 			o.ID, o.Items[i].ProductID, o.Items[i].SellerID,
 			o.Items[i].ProductName, o.Items[i].UnitPrice, o.Items[i].Quantity,
@@ -177,3 +177,4 @@ func (r *OrderRepository) UpdateStatus(ctx context.Context, id int64, status ord
 	)
 	return err
 }
+

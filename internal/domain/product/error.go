@@ -3,8 +3,8 @@ package product
 import "errors"
 
 var (
-	ErrNotFound           = errors.New(" not found")
-	ErrEmailAlreadyExists = errors.New("email already exists")
-	ErrInsufficientStock     = errors.New("insufficient stock")
-	ErrInvalidProductID     = errors.New("invalid product id")
+	ErrNotFound          = errors.New(" not found")
+	ErrInsufficientStock = errors.New("insufficient stock")
+	ErrForbidden         = errors.New("forbidden")
+	ErrInvalidInput      = errors.New("invalid input")
 )

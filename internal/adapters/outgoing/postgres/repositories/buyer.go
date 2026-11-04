@@ -1,11 +1,10 @@
 package repositories
 
 import (
+	"Go_Commerce/internal/domain/buyer"
 	"context"
 	"database/sql"
 	"time"
-
-	"Go_Commerce/internal/domain/buyer"
 )
 
 type BuyerRepository struct {

@@ -34,15 +34,7 @@ func New(cfg *config.Config) nethttp.Handler {
 		Path:        "/orders/{id}",
 		Summary:     "Get order by ID",
 	}, (&handlers.OrderHandler{}).GetOrder)
-	//huma.Register (api, huma.Operation{
-	//	OperationID: "create-order",
-	//	Method:      nethttp.MethodGet,
-	//	Path:        "/orders/{id}",
-	//	Summary:     "Post order by ID",
-	//}, (&handlers.OrderHandler{}).PostOrder)
-	//
-	//
-	//
+
 
 	return r
 }
