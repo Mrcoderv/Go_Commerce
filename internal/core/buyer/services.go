@@ -2,6 +2,8 @@ package buyer
 
 import (
 	"context"
+	"errors"
+	"net/mail"
 	"strings"
 
 	"Go_Commerce/internal/domain/buyer"
@@ -16,18 +18,42 @@ type BuyerService struct {
 func NewBuyerService(repo outgoing.BuyerRepository) incoming.BuyerService {
 	return &BuyerService{repo: repo}
 }
+func (s *BuyerService) Register(
+    ctx context.Context,
+    in incoming.RegisterBuyerInput,
+) (buyer.Buyer, error) {
+	// spacig remove
+    name := strings.TrimSpace(in.Name)
+    email := strings.ToLower(strings.TrimSpace(in.Email))
 
-func (s *BuyerService) Register(ctx context.Context, in incoming.RegisterBuyerInput) (buyer.Buyer, error) {
-	if strings.TrimSpace(in.Name) == "" || strings.TrimSpace(in.Email) == "" {
-		return buyer.Buyer{}, buyer.ErrNotFound
-	}
-	b := buyer.Buyer{
-		Name:    in.Name,
-		Email:   in.Email,
-		Phone:   in.Phone,
-		Address: in.Address,
-	}
-	return s.repo.Create(ctx, b)
+    if name == "" || email == "" {
+        return buyer.Buyer{}, buyer.ErrInvalidInput
+    }
+
+    // Check whether the email is valid
+    if _, err := mail.ParseAddress(email); err != nil {
+        return buyer.Buyer{}, buyer.ErrInvalidInput
+    }
+
+    // Check if a buyer with this email already exists
+    existingBuyer, err := s.repo.GetByEmail(ctx, email)
+    if err == nil && existingBuyer.ID != 0 {
+        return buyer.Buyer{}, buyer.ErrEmailAlreadyExists
+    }
+
+    if err != nil && !errors.Is(err, buyer.ErrNotFound) {
+        return buyer.Buyer{}, err
+    }
+
+    // Create the new buyer
+    newBuyer := buyer.Buyer{
+        Name:    name,
+        Email:   email,
+        Phone:   strings.TrimSpace(in.Phone),
+        Address: strings.TrimSpace(in.Address),
+    }
+
+    return s.repo.Create(ctx, newBuyer)
 }
 
 func (s *BuyerService) GetByID(ctx context.Context, id int64) (buyer.Buyer, error) {
