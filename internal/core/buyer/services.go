@@ -19,39 +19,39 @@ func NewBuyerService(repo outgoing.BuyerRepository) incoming.BuyerService {
 	return &BuyerService{repo: repo}
 }
 func (s *BuyerService) Register(
-    ctx context.Context,
-    in incoming.RegisterBuyerInput,
+	ctx context.Context,
+	in incoming.RegisterBuyerInput,
 ) (buyer.Buyer, error) {
 	// spacig remove
-    name := strings.TrimSpace(in.Name)
-    email := strings.ToLower(strings.TrimSpace(in.Email))
+	name := strings.TrimSpace(in.Name)
+	email := strings.ToLower(strings.TrimSpace(in.Email))
 
-    if name == "" || email == "" {
-        return buyer.Buyer{}, buyer.ErrInvalidInput
-    }
+	if name == "" || email == "" {
+		return buyer.Buyer{}, buyer.ErrInvalidInput
+	}
 
-    if _, err := mail.ParseAddress(email); err != nil {
-        return buyer.Buyer{}, buyer.ErrInvalidInput
-    }
+	if _, err := mail.ParseAddress(email); err != nil {
+		return buyer.Buyer{}, buyer.ErrInvalidInput
+	}
 	// alredy exist email
-    existingBuyer, err := s.repo.GetByEmail(ctx, email)
-    if err == nil && existingBuyer.ID != 0 {
-        return buyer.Buyer{}, buyer.ErrEmailAlreadyExists
-    }
+	existingBuyer, err := s.repo.GetByEmail(ctx, email)
+	if err == nil && existingBuyer.ID != 0 {
+		return buyer.Buyer{}, buyer.ErrEmailAlreadyExists
+	}
 
-    if err != nil && !errors.Is(err, buyer.ErrNotFound) {
-        return buyer.Buyer{}, err
-    }
+	if err != nil && !errors.Is(err, buyer.ErrNotFound) {
+		return buyer.Buyer{}, err
+	}
 
-    // Create the new buyer
-    newBuyer := buyer.Buyer{
-        Name:    name,
-        Email:   email,
-        Phone:   strings.TrimSpace(in.Phone),
-        Address: strings.TrimSpace(in.Address),
-    }
+	// Create the new buyer
+	newBuyer := buyer.Buyer{
+		Name:    name,
+		Email:   email,
+		Phone:   strings.TrimSpace(in.Phone),
+		Address: strings.TrimSpace(in.Address),
+	}
 
-    return s.repo.Create(ctx, newBuyer)
+	return s.repo.Create(ctx, newBuyer)
 }
 
 func (s *BuyerService) GetByID(ctx context.Context, id int64) (buyer.Buyer, error) {
