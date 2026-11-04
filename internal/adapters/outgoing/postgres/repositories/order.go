@@ -29,7 +29,7 @@ func (r *OrderRepository) Create(ctx context.Context, o order.Order) (order.Orde
 	}
 
 	if o.Status == "" {
-		o.Status = order.Status("pending")
+		o.Status = order.StatusPending
 	}
 
 	err = tx.QueryRowContext(ctx,
