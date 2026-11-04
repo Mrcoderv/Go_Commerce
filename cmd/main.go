@@ -4,6 +4,7 @@ import (
 	"Go_Commerce/internal/adapters/incoming/http"
 	"Go_Commerce/internal/adapters/incoming/http/handlers"
 	"Go_Commerce/internal/adapters/outgoing/memory"
+	"Go_Commerce/internal/adapters/outgoing/postgres"
 	"Go_Commerce/internal/adapters/outgoing/postgres/repositories"
 	"Go_Commerce/internal/core/buyer"
 	"Go_Commerce/internal/core/order"
@@ -33,14 +34,17 @@ func main() {
 			// Buyer and order: repositories (bound to their port interfaces)
 			fx.Annotate(repositories.NewBuyerRepository, fx.As(new(outgoing.BuyerRepository))),
 			fx.Annotate(repositories.NewOrderRepository, fx.As(new(outgoing.OrderRepository))),
+			fx.Annotate(repositories.NewProductRepository, fx.As(new(outgoing.ProductRepository))),
+			postgres.NewTxManager,
 
 			// Buyer and order: handlers
 			handlers.NewBuyerHandler,
 			handlers.NewOrderHandler,
 		),
 		database.Module,
-		buyer.Module, // provides incoming.BuyerService
-		order.Module, // provides incoming.OrderService
+		buyer.Module, // incomming buyer modue
+		order.Module, // incomming order module
+
 		fx.Invoke(func(srv *nethttp.Server) {}),
 	)
 	app.Run()

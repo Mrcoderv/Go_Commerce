@@ -53,7 +53,7 @@ func (h *BuyerHandler) Get(ctx context.Context, req *GetBuyerRequest) (*BuyerRes
 	out, err := h.service.GetByID(ctx, req.ID)
 
 	if err != nil {
-		return nil, mapBuyerError()
+		return nil, mapBuyerError(err)
 
 	}
 	return &BuyerResponse{Body: out}, nil
@@ -88,7 +88,7 @@ type DeleteBuyerRequest struct {
 
 func (handler *BuyerHandler) Delete(ctx context.Context, r *DeleteBuyerRequest) (*struct{}, error) {
 	if err := handler.service.Delete(ctx, r.ID); err != nil {
-		return nil, mapSellerError(err)
+		return nil, mapBuyerError(err)
 	}
 	return nil, nil
 }
