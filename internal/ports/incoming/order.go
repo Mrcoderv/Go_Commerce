@@ -11,18 +11,18 @@ type OrderItemInput struct {
 }
 
 type PlaceOrderInput struct {
-	ProductID int64
-	BuyerID   int64
-	Items     []OrderItemInput
+	BuyerID int64
+	Items   []OrderItemInput
 }
 
-type ProductReader struct {
-	ID       int64
-	SellerID int64
-	Name     string
-	Price    float64
-	Stock    int
-}
+//type ProductReader struct {
+//	ID       int64
+//	SellerID int64
+//	Name     string
+//	Price    float64
+//	Stock    int
+//}
+
 type OrderService interface {
 	PlaceOrder(ctx context.Context, in PlaceOrderInput) (order.Order, error)
 
