@@ -11,5 +11,4 @@ type OrderRepository interface {
 	ListByBuyer(ctx context.Context, buyerID int64, limit, offset int) ([]order.Order, error)
 	ListBySeller(ctx context.Context, sellerID int64, limit, offset int) ([]order.Order, error)
 	UpdateStatus(ctx context.Context, id int64, status order.Status) error
-
 }
