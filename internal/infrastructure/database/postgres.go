@@ -59,4 +59,4 @@ func NewFx(lc fx.Lifecycle, cfg *config.Config) (*Postgres, error) {
 	return db, nil
 }
 
-var Module = fx.Module("database", fx.Provide(NewFx))
+var module = fx.Module("database", fx.Provide(NewFx))
