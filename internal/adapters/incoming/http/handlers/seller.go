@@ -49,3 +49,6 @@ func mapSellerError(err error) error {
 		return huma.Error500InternalServerError("internal error")
 	}
 }
+func NewSellerHandler(s incoming.SellerService) *SellerHandler {
+	return &SellerHandler{Service: s}
+}
