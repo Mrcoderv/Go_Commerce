@@ -67,5 +67,38 @@ func New(cfg *config.Config, buyerH *handlers.BuyerHandler, sellerHandler *handl
 		Tags:          []string{"Sellers"},
 	}, sellerHandler.Register)
 
+	huma.Register(api, huma.Operation{
+		OperationID: "get-seller",
+		Method:      nethttp.MethodGet,
+		Path:        "/sellers/{id}",
+		Summary:     "Get seller by ID",
+		Tags:        []string{"Sellers"},
+
+	}, sellerHandler.GetByID)
+
+	huma.Register(api, huma.Operation{
+	OperationID: "list-sellers",
+	Method:      nethttp.MethodGet,
+	Path:        "/sellers",
+	Summary:     "List sellers",
+	Tags:        []string{"Sellers"},
+}, sellerHandler.List)
+huma.Register(api, huma.Operation{
+	OperationID: "update-seller",
+	Method:      nethttp.MethodPatch,
+	Path:        "/sellers/{id}",
+	Summary:     "Update a seller",
+	Tags:        []string{"Sellers"},
+}, sellerHandler.Update)
+
+huma.Register(api, huma.Operation{
+	OperationID:   "delete-seller",
+	Method:        nethttp.MethodDelete,
+	Path:          "/sellers/{id}",
+	Summary:       "Delete a seller",
+	DefaultStatus: nethttp.StatusNoContent,
+	Tags:          []string{"Sellers"},
+}, sellerHandler.Delete)
+
 	return r
 }
