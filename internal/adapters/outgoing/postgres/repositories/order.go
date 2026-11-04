@@ -3,6 +3,8 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 
 	"Go_Commerce/internal/domain/order"
@@ -11,7 +13,7 @@ import (
 type OrderRepository struct {
 	db *sql.DB
 }
-+
+
 func NewOrderRepository(db *sql.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
@@ -70,8 +72,12 @@ func (r *OrderRepository) GetByID(ctx context.Context, id int64) (order.Order, e
 		`SELECT id, buyer_id, status, total_amount, created_at FROM orders WHERE id = $1`,
 		id,
 	).Scan(&o.ID, &o.BuyerID, &status, &o.Total, &o.CreatedAt)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return order.Order{}, order.ErrNotFound
+	}
 	if err != nil {
-		return o, err
+		return order.Order{}, fmt.Errorf("get order by id %d: %w", id, err)
 	}
 
 	o.Status = order.Status(status)
@@ -171,10 +177,20 @@ func (r *OrderRepository) scanOrders(ctx context.Context, rows *sql.Rows) ([]ord
 }
 
 func (r *OrderRepository) UpdateStatus(ctx context.Context, id int64, status order.Status) error {
-	_, err := r.db.ExecContext(ctx,
+	response, err := r.db.ExecContext(ctx,
 		`UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`,
 		status, id,
 	)
-	return err
-}
+	if err != nil {
+		return fmt.Errorf("error updating order status %d: %w", id, err)
+	}
+	n, err := response.RowsAffected()
 
+	if err != nil {
+		return fmt.Errorf("error updating order status %d: %w", id, err)
+	}
+	if n == 0 {
+		return order.ErrNotFound
+	}
+	return nil
+}
