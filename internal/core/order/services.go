@@ -12,7 +12,7 @@ type OrderService struct {
 	repo outgoing.OrderRepository
 }
 
-func NewOrderService(repo outgoing.OrderRepository) *OrderService {
+func NewOrderService(repo outgoing.OrderRepository) incoming.OrderService {
 	return &OrderService{repo: repo}
 }
 
@@ -33,12 +33,27 @@ func (s *OrderService) ListBySeller(ctx context.Context, sellerID int64, f incom
 }
 
 func (s *OrderService) UpdateStatus(ctx context.Context, id int64, next order.Status) (order.Order, error) {
+	if !next.IsValid() {
+		return order.Order{}, order.ErrInvalidInput
+
+	}
+	orders, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return order.Order{}, err
+	}
+	if !orders.Status.CanTransitionTo(next) {
+		return order.Order{}, order.ErrInvalidTransaction
+	}
 	if err := s.repo.UpdateStatus(ctx, id, next); err != nil {
 		return order.Order{}, err
 	}
-	return s.repo.GetByID(ctx, id)
+	orders.Status = next
+	return orders, nil
 }
 
 func (s *OrderService) Cancel(ctx context.Context, id int64) error {
-	return s.repo.UpdateStatus(ctx, id, order.Status(""))
+	_, err := s.UpdateStatus(ctx, id, order.StatusCancelled)
+	return err
 }
+
+var _ incoming.OrderService = (*OrderService)(nil)
