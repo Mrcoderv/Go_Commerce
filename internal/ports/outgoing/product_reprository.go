@@ -12,5 +12,5 @@ type ProductRepository interface {
 	Update(ctx context.Context, product product.Product) (product.Product, error)
 	Delete(ctx context.Context, id int64) error
 	DecreasesStock(ctx context.Context, id product.Product, qty product.Product) error
-	//	IncreasesStock(ctx context.Context, id product.Product, qty product.Product) error
+	IncreasesStock(ctx context.Context, id product.Product, qty product.Product) error
 }
