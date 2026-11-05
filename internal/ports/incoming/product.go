@@ -9,14 +9,14 @@ type CreateProductInput struct {
 	SellerID    int64
 	Name        string
 	Description string
-	Price       int64 // paisa
+	Price       float64 // as-is
 	Stock       int
 }
 
 type UpdateProductInput struct {
 	Name        *string
 	Description *string
-	Price       *int64
+	Price       *float64
 	Stock       *int
 }
 

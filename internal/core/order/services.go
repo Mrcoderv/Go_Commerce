@@ -69,10 +69,10 @@ func (s *OrderService) PlaceOrder(ctx context.Context, in incoming.PlaceOrderInp
 				ProductID:   p.ID,
 				SellerID:    p.SellerID,
 				ProductName: p.Name,
-				UnitPrice:   p.Price,
+				UnitPrice:   int64(p.Price),
 				Quantity:    it.Quantity,
 			})
-			o.Total += p.Price * int64(it.Quantity)
+			o.Total += int64(p.Price * float64(it.Quantity))
 		}
 
 		// Save order

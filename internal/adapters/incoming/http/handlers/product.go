@@ -37,18 +37,11 @@ func (h *ProductHandler) Create(ctx context.Context, req *dto.CreateProductReque
 		return nil, MapError(domainauth.ErrUnauthorized)
 	}
 
-	var priceInPaisa int64
-	if req.Body.UnitPrice > 0 {
-		priceInPaisa = req.Body.UnitPrice
-	} else if req.Body.Price > 0 {
-		priceInPaisa = int64(req.Body.Price)
-	}
-
 	out, err := h.Service.Create(ctx, incoming.CreateProductInput{
 		SellerID:    sellerID,
 		Name:        req.Body.Name,
 		Description: req.Body.Description,
-		Price:       priceInPaisa,
+		Price:       req.Body.Price,
 		Stock:       req.Body.Stock,
 	})
 	if err != nil {
@@ -96,11 +89,9 @@ func (h *ProductHandler) Update(ctx context.Context, req *dto.UpdateProductReque
 		return nil, MapError(domainauth.ErrUnauthorized)
 	}
 
-	var priceInPaisa *int64
-	if req.Body.UnitPrice != nil {
-		priceInPaisa = req.Body.UnitPrice
-	} else if req.Body.Price != nil {
-		p := int64(*req.Body.Price)
+	var priceInPaisa *float64
+	if req.Body.Price != nil {
+		p := *req.Body.Price
 		priceInPaisa = &p
 	}
 
