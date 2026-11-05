@@ -58,6 +58,11 @@ func New(cfg *config.Config, buyerH *handlers.BuyerHandler, sellerHandler *handl
 		DefaultStatus: nethttp.StatusNoContent,
 	}, buyerH.Delete)
 
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> 62bef61 (Update buyer handlers and router)
 	huma.Register(api, huma.Operation{
 		OperationID:   "register-seller",
 		Method:        nethttp.MethodPost,
@@ -73,6 +78,7 @@ func New(cfg *config.Config, buyerH *handlers.BuyerHandler, sellerHandler *handl
 		Path:        "/sellers/{id}",
 		Summary:     "Get seller by ID",
 		Tags:        []string{"Sellers"},
+<<<<<<< HEAD
 
 	}, sellerHandler.GetByID)
 
@@ -116,5 +122,50 @@ huma.Register(api, huma.Operation{
 	Tags:        []string{"Products"},
 }, productHandler.GetByID)
 
+=======
+	}, sellerHandler.GetByID)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "list-sellers",
+		Method:      nethttp.MethodGet,
+		Path:        "/sellers",
+		Summary:     "List sellers",
+		Tags:        []string{"Sellers"},
+	}, sellerHandler.List)
+	huma.Register(api, huma.Operation{
+		OperationID: "update-seller",
+		Method:      nethttp.MethodPatch,
+		Path:        "/sellers/{id}",
+		Summary:     "Update a seller",
+		Tags:        []string{"Sellers"},
+	}, sellerHandler.Update)
+
+	huma.Register(api, huma.Operation{
+		OperationID:   "delete-seller",
+		Method:        nethttp.MethodDelete,
+		Path:          "/sellers/{id}",
+		Summary:       "Delete a seller",
+		DefaultStatus: nethttp.StatusNoContent,
+		Tags:          []string{"Sellers"},
+	}, sellerHandler.Delete)
+	huma.Register(api, huma.Operation{
+		OperationID:   "create-product",
+		Method:        nethttp.MethodPost,
+		Path:          "/products",
+		Summary:       "Create a product",
+		DefaultStatus: nethttp.StatusCreated,
+		Tags:          []string{"Products"},
+	}, productHandler.Create)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-product",
+		Method:      nethttp.MethodGet,
+		Path:        "/products/{id}",
+		Summary:     "Get a product by ID",
+		Tags:        []string{"Products"},
+	}, productHandler.GetByID)
+
+>>>>>>> Stashed changes
+>>>>>>> 62bef61 (Update buyer handlers and router)
 	return r
 }

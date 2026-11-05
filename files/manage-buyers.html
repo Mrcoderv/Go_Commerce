@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manage buyers</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="logo">Go_Commerce <span>/ Admin</span></div>
+    <nav class="nav">
+      <a href="manage-sellers.html">Manage sellers</a>
+      <a href="manage-buyers.html" class="active">Manage buyers</a>
+      <a href="seller.html">Seller page</a>
+      <a href="buyer.html">Shop page</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="card-head">
+        <h1>Manage buyers</h1>
+        <button class="btn">Add buyer</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Name</td><td>email@example.com</td><td>Phone</td><td>Address</td><td><a href="#">Edit</a> &nbsp; <a href="#" class="danger">Delete</a></td></tr>
+            <tr><td>2</td><td>Name</td><td>email@example.com</td><td>Phone</td><td>Address</td><td><a href="#">Edit</a> &nbsp; <a href="#" class="danger">Delete</a></td></tr>
+            <tr><td>3</td><td>Name</td><td>email@example.com</td><td>Phone</td><td>Address</td><td><a href="#">Edit</a> &nbsp; <a href="#" class="danger">Delete</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Add / edit buyer</h2>
+      <form class="form">
+        <label class="field">Name <input type="text" name="name"></label>
+        <label class="field">Email <input type="email" name="email"></label>
+        <label class="field">Phone <input type="text" name="phone"></label>
+        <label class="field">Address <textarea name="address" rows="3"></textarea></label>
+        <div class="row">
+          <button type="submit" class="btn">Save buyer</button>
+          <button type="button" class="btn btn-outline">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

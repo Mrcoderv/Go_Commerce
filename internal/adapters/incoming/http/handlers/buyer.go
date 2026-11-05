@@ -19,7 +19,7 @@ func NewBuyerHandler(service incoming.BuyerService) *BuyerHandler {
 }
 
 // json request body to the browser
-type RegisterBuyerRequest struct {
+type RegisterBuyerRequest struct { // dto that is the  define the shape of teh data ..
 	Body struct {
 		Name    string `json:"name" minlength:"1"`
 		Email   string `json:"email" format:"email"`
