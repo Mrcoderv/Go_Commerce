@@ -7,6 +7,7 @@ import (
 	"Go_Commerce/internal/adapters/incoming/http/handlers"
 	"Go_Commerce/internal/adapters/outgoing/postgres"
 	"Go_Commerce/internal/adapters/outgoing/postgres/repositories"
+	"Go_Commerce/internal/core/auth"
 	"Go_Commerce/internal/core/buyer"
 	"Go_Commerce/internal/core/order"
 	"Go_Commerce/internal/core/product"
@@ -28,20 +29,19 @@ func main() {
 			http.New,
 			server.NewServer,
 			postgres.NewTxManager,
-
-			// repositories, each bound to its port interface
 			fx.Annotate(repositories.NewSellerRepository, fx.As(new(outgoing.SellerRepository))),
 			fx.Annotate(repositories.NewProductRepository, fx.As(new(outgoing.ProductRepository))),
 			fx.Annotate(repositories.NewBuyerRepository, fx.As(new(outgoing.BuyerRepository))),
 			fx.Annotate(repositories.NewOrderRepository, fx.As(new(outgoing.OrderRepository))),
-
-			// handlers
+			fx.Annotate(repositories.NewUserRepository, fx.As(new(outgoing.UserRepository))),
+			handlers.NewAuthHandler,
 			handlers.NewSellerHandler,
 			handlers.NewProductHandler,
 			handlers.NewBuyerHandler,
 			handlers.NewOrderHandler,
 		),
 		database.Module,
+		auth.Module,
 		seller.Module,
 		product.Module,
 		buyer.Module,

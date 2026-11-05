@@ -5,6 +5,7 @@ import (
 	"Go_Commerce/internal/ports/incoming"
 	"Go_Commerce/internal/ports/outgoing"
 	"context"
+	"fmt"
 	"sort"
 )
 
@@ -24,7 +25,13 @@ func NewOrderService(
 	return &OrderService{repo: repo, buyers: buyers, products: products, tx: tx}
 }
 
+var _ incoming.OrderService = (*OrderService)(nil)
+
 func (s *OrderService) PlaceOrder(ctx context.Context, in incoming.PlaceOrderInput) (order.Order, error) {
+	if in.BuyerID <= 0 {
+		return order.Order{}, order.ErrInvalidInput
+	}
+
 	items, err := normalizeItems(in)
 	if err != nil {
 		return order.Order{}, err
@@ -53,7 +60,7 @@ func (s *OrderService) PlaceOrder(ctx context.Context, in incoming.PlaceOrderInp
 				return err
 			}
 
-			// DecreaseStock exists to prevent the quantity issue
+			// DecreaseStock checks and reduces stock in one statement.
 			if err := s.products.DecreaseStock(ctx, it.ProductID, it.Quantity); err != nil {
 				return err
 			}
@@ -62,16 +69,16 @@ func (s *OrderService) PlaceOrder(ctx context.Context, in incoming.PlaceOrderInp
 				ProductID:   p.ID,
 				SellerID:    p.SellerID,
 				ProductName: p.Name,
-				UnitPrice:   p.UnitPrice,
+				UnitPrice:   p.Price,
 				Quantity:    it.Quantity,
 			})
-			o.Total += p.UnitPrice * int64(it.Quantity)
+			o.Total += p.Price * int64(it.Quantity)
 		}
 
-		//saving order
+		// Save order
 		created, err := s.repo.Create(ctx, o)
 		if err != nil {
-			return err
+			return fmt.Errorf("save order: %w", err)
 		}
 		placed = created
 		return nil
@@ -87,11 +94,13 @@ func (s *OrderService) GetByID(ctx context.Context, id int64) (order.Order, erro
 }
 
 func (s *OrderService) ListByBuyer(ctx context.Context, buyerID int64, f incoming.ListFilter) ([]order.Order, error) {
-	return s.repo.ListByBuyer(ctx, buyerID, f.Limit, f.Offset)
+	limit, offset := clampFilter(f)
+	return s.repo.ListByBuyer(ctx, buyerID, limit, offset)
 }
 
 func (s *OrderService) ListBySeller(ctx context.Context, sellerID int64, f incoming.ListFilter) ([]order.Order, error) {
-	return s.repo.ListBySeller(ctx, sellerID, f.Limit, f.Offset)
+	limit, offset := clampFilter(f)
+	return s.repo.ListBySeller(ctx, sellerID, limit, offset)
 }
 
 func (s *OrderService) UpdateStatus(ctx context.Context, id int64, next order.Status) (order.Order, error) {
@@ -113,26 +122,62 @@ func (s *OrderService) UpdateStatus(ctx context.Context, id int64, next order.St
 	o.Status = next
 	return o, nil
 }
+
 func (s *OrderService) Cancel(ctx context.Context, id int64) error {
-	_, err := s.UpdateStatus(ctx, id, order.StatusCancelled)
-	return err
+	return s.tx.WithinTx(ctx, func(ctx context.Context) error {
+		o, err := s.repo.GetByID(ctx, id)
+		if err != nil {
+			return err
+		}
+		if !o.Status.CanTransitionTo(order.StatusCancelled) {
+			return order.ErrInvalidTransition
+		}
+		for _, it := range o.Items {
+			if err := s.products.IncreaseStock(ctx, it.ProductID, it.Quantity); err != nil {
+				return err
+			}
+		}
+		return s.repo.UpdateStatus(ctx, id, order.StatusCancelled)
+	})
 }
 
-var _ incoming.OrderService = (*OrderService)(nil)
+func clampFilter(f incoming.ListFilter) (int, int) {
+	limit := f.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	offset := f.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	return limit, offset
+}
 
 func normalizeItems(in incoming.PlaceOrderInput) ([]incoming.OrderItemInput, error) {
 	if len(in.Items) == 0 {
 		return nil, order.ErrInvalidInput
 	}
-	out := make([]incoming.OrderItemInput, 0, len(in.Items))
+	merged := make(map[int64]int)
+	var orderKey []int64
 	for _, it := range in.Items {
-		if it.ProductID <= 0 {
+		if it.ProductID <= 0 || it.Quantity <= 0 {
 			return nil, order.ErrInvalidInput
 		}
-		if it.Quantity <= 0 {
-			return nil, order.ErrInvalidInput
+		if _, seen := merged[it.ProductID]; !seen {
+			orderKey = append(orderKey, it.ProductID)
 		}
-		out = append(out, it)
+		merged[it.ProductID] += it.Quantity
+	}
+
+	out := make([]incoming.OrderItemInput, 0, len(merged))
+	for _, pid := range orderKey {
+		out = append(out, incoming.OrderItemInput{
+			ProductID: pid,
+			Quantity:  merged[pid],
+		})
 	}
 	return out, nil
 }

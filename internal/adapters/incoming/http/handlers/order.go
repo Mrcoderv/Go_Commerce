@@ -1,13 +1,12 @@
 package handlers
 
 import (
-	"context"
-	"errors"
-
+	"Go_Commerce/internal/adapters/incoming/http/dto"
+	"Go_Commerce/internal/adapters/incoming/http/middleware"
+	domainauth "Go_Commerce/internal/domain/auth"
 	"Go_Commerce/internal/domain/order"
 	"Go_Commerce/internal/ports/incoming"
-
-	"github.com/danielgtaylor/huma/v2"
+	"context"
 )
 
 type OrderHandler struct {
@@ -18,71 +17,82 @@ func NewOrderHandler(service incoming.OrderService) *OrderHandler {
 	return &OrderHandler{Service: service}
 }
 
-type GetOrderInput struct {
-	ID int64 `path:"id" minimum:"1"`
-}
-
-type OrderResponse struct {
-	Body order.Order
-}
-
-func (h *OrderHandler) GetOrder(ctx context.Context, input *GetOrderInput) (*OrderResponse, error) {
-	o, err := h.Service.GetByID(ctx, input.ID)
-	if err != nil {
-		return nil, mapOrderError(err)
+func buyerIDFromAuth(ctx context.Context) (int64, bool) {
+	c, ok := middleware.ClaimsFromContext(ctx)
+	if !ok || c.Role != domainauth.RoleBuyer || c.BuyerID == nil {
+		return 0, false
 	}
-	return &OrderResponse{Body: o}, nil
+	return *c.BuyerID, true
 }
 
-type ListBuyerOrdersInput struct {
-	BuyerID int64 `path:"id" minimum:"1"`
-	Limit   int   `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset  int   `query:"offset" default:"0" minimum:"0"`
-}
+func (h *OrderHandler) PlaceOrder(ctx context.Context, req *dto.PlaceOrderRequest) (*dto.OrderResponse, error) {
+	buyerID := req.Body.BuyerID
+	if id, ok := buyerIDFromAuth(ctx); ok {
+		buyerID = id
+	}
+	if buyerID == 0 {
+		return nil, MapError(domainauth.ErrUnauthorized)
+	}
+	items := make([]incoming.OrderItemInput, len(req.Body.Items))
+	for i, it := range req.Body.Items {
+		items[i] = incoming.OrderItemInput{ProductID: it.ProductID, Quantity: it.Quantity}
+	}
 
-type OrderListResponse struct {
-	Body []order.Order
-}
-
-func (h *OrderHandler) ListByBuyer(ctx context.Context, in *ListBuyerOrdersInput) (*OrderListResponse, error) {
-	orders, err := h.Service.ListByBuyer(ctx, in.BuyerID, incoming.ListFilter{
-		Limit:  in.Limit,
-		Offset: in.Offset,
+	o, err := h.Service.PlaceOrder(ctx, incoming.PlaceOrderInput{
+		BuyerID: buyerID,
+		Items:   items,
 	})
 	if err != nil {
-		return nil, mapOrderError(err)
+		return nil, MapError(err)
+	}
+	return &dto.OrderResponse{Body: o}, nil
+}
+
+func (h *OrderHandler) GetOrder(ctx context.Context, req *dto.GetOrderRequest) (*dto.OrderResponse, error) {
+	o, err := h.Service.GetByID(ctx, req.ID)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	return &dto.OrderResponse{Body: o}, nil
+}
+
+func (h *OrderHandler) UpdateStatus(ctx context.Context, req *dto.UpdateOrderStatusRequest) (*dto.OrderResponse, error) {
+	o, err := h.Service.UpdateStatus(ctx, req.ID, req.Body.Status)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	return &dto.OrderResponse{Body: o}, nil
+}
+
+func (h *OrderHandler) Cancel(ctx context.Context, req *dto.CancelOrderRequest) (*dto.OrderResponse, error) {
+	if err := h.Service.Cancel(ctx, req.ID); err != nil {
+		return nil, MapError(err)
+	}
+	o, err := h.Service.GetByID(ctx, req.ID)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	return &dto.OrderResponse{Body: o}, nil
+}
+
+func (h *OrderHandler) ListByBuyer(ctx context.Context, req *dto.ListBuyerOrdersRequest) (*dto.ListOrdersResponse, error) {
+	orders, err := h.Service.ListByBuyer(ctx, req.BuyerID, incoming.ListFilter{Limit: req.Limit, Offset: req.Offset})
+	if err != nil {
+		return nil, MapError(err)
 	}
 	if orders == nil {
-		orders = []order.Order{} // return [] instead of null
+		orders = []order.Order{}
 	}
-	return &OrderListResponse{Body: orders}, nil
+	return &dto.ListOrdersResponse{Body: orders}, nil
 }
 
-type UpdateOrderStatusInput struct {
-	ID   int64 `path:"id" minimum:"1"`
-	Body struct {
-		Status order.Status `json:"status" enum:"pending,confirmed,shipped,delivered,cancelled"`
-	}
-}
-
-func (h *OrderHandler) UpdateStatus(ctx context.Context, in *UpdateOrderStatusInput) (*OrderResponse, error) {
-	o, err := h.Service.UpdateStatus(ctx, in.ID, in.Body.Status)
+func (h *OrderHandler) ListBySeller(ctx context.Context, req *dto.ListSellerOrdersRequest) (*dto.ListOrdersResponse, error) {
+	orders, err := h.Service.ListBySeller(ctx, req.SellerID, incoming.ListFilter{Limit: req.Limit, Offset: req.Offset})
 	if err != nil {
-		return nil, mapOrderError(err)
+		return nil, MapError(err)
 	}
-	return &OrderResponse{Body: o}, nil
-}
-
-// mapOrderError turns domain errors into HTTP errors.
-func mapOrderError(err error) error {
-	switch {
-	case errors.Is(err, order.ErrNotFound):
-		return huma.Error404NotFound("order not found")
-	case errors.Is(err, order.ErrInvalidInput):
-		return huma.Error400BadRequest("invalid order input")
-	case errors.Is(err, order.ErrInvalidTransaction):
-		return huma.Error409Conflict("invalid status transition")
-	default:
-		return huma.Error500InternalServerError("internal server error")
+	if orders == nil {
+		orders = []order.Order{}
 	}
+	return &dto.ListOrdersResponse{Body: orders}, nil
 }

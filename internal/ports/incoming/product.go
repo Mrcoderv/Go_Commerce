@@ -9,34 +9,29 @@ type CreateProductInput struct {
 	SellerID    int64
 	Name        string
 	Description string
-	UnitPrice   int64 // paisa
+	Price       int64 // paisa
 	Stock       int
 }
 
 type UpdateProductInput struct {
 	Name        *string
 	Description *string
-	UnitPrice   *int64
+	Price       *int64
 	Stock       *int
 }
 
 type ProductFilter struct {
-	SellerID *int64 // optional: list only this seller’s products
+	SellerID *int64
 	Limit    int
 	Offset   int
 }
 
 type ProductService interface {
 	Create(ctx context.Context, in CreateProductInput) (product.Product, error)
-
 	GetByID(ctx context.Context, id int64) (product.Product, error)
-
 	List(ctx context.Context, f ProductFilter) ([]product.Product, error)
-
 	Update(ctx context.Context, id int64, sellerID int64, in UpdateProductInput) (product.Product, error)
 	Delete(ctx context.Context, id int64, sellerID int64) error
-
 	CheckAvailability(ctx context.Context, productID int64, qty int) (product.Product, error)
-
 	ReduceStock(ctx context.Context, productID int64, qty int) error
 }

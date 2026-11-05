@@ -1,10 +1,15 @@
 package product
 
+import "time"
+
 type Product struct {
-	ID          int64  `json:"id"`
-	SellerID    int64  `json:"seller_id"`
-	Name        string `json:"product_name"`
-	Description string `json:"product_description"`
-	UnitPrice   int64  `json:"unit_price"`
-	Stock       int    `json:"stock"`
+	ID          int64      `json:"id"`
+	SellerID    int64      `json:"seller_id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Price       int64      `json:"price"` // in paisa
+	Stock       int        `json:"stock"`
+	CreatedAt   time.Time  `json:"created_at,omitempty"`
+	UpdatedAt   time.Time  `json:"updated_at,omitempty"`
+	DeletedAt   *time.Time `json:"-"`
 }

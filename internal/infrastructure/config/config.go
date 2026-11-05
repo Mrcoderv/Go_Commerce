@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ type Config struct {
 	AppPort   int
 	LogLevel  string
 	TestDBURL string
+	JWTSecret string
 
 	DBHost     string
 	DBPort     int
@@ -24,37 +26,75 @@ type Config struct {
 	DBSSLMode  string
 }
 
-// DSN builds a PostgreSQL connection string from the DB config.
 func (c Config) DSN() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName, c.DBSSLMode)
+	u := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(c.DBUser, c.DBPassword),
+		Host:   fmt.Sprintf("%s:%d", c.DBHost, c.DBPort),
+		Path:   c.DBName,
+	}
+	q := u.Query()
+	q.Set("sslmode", c.DBSSLMode)
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+func (c Config) Validate() error {
+	if c.AppPort <= 0 || c.AppPort > 65535 {
+		return fmt.Errorf("config: invalid APP_PORT %d", c.AppPort)
+	}
+	if c.DBPort <= 0 || c.DBPort > 65535 {
+		return fmt.Errorf("config: invalid DB_PORT %d", c.DBPort)
+	}
+	if c.DBHost == "" {
+		return errors.New("config: DB_HOST is required")
+	}
+	if c.DBUser == "" {
+		return errors.New("config: DB_USER is required")
+	}
+	if c.DBName == "" {
+		return errors.New("config: DB_NAME is required")
+	}
+	if c.AppEnv == "production" && c.DBPassword == "" {
+		return errors.New("config: DB_PASSWORD is required in production")
+	}
+	if c.AppEnv == "production" && c.JWTSecret == "" {
+		return errors.New("config: JWT_SECRET is required in production")
+	}
+	return nil
 }
 
 func Load() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("config: loading .env: %w", err)
-		}
-	}
+	_ = godotenv.Load()
+
 	appPort, err := getInt("APP_PORT", 8080)
 	if err != nil {
 		return nil, err
 	}
-	dbPort, err := getInt("DB_PORT", 5432) //empty check
+	dbPort, err := getInt("DB_PORT", 5432)
 	if err != nil {
 		return nil, err
 	}
-	return &Config{
+
+	cfg := &Config{
 		AppEnv:     getString("APP_ENV", "development"),
 		AppPort:    appPort,
 		LogLevel:   getString("LOG_LEVEL", "info"),
 		TestDBURL:  getString("TEST_DATABASE_URL", ""),
+		JWTSecret:  getString("JWT_SECRET", "dev-secret-change-me"),
 		DBHost:     getString("DB_HOST", "localhost"),
 		DBPort:     dbPort,
 		DBUser:     getString("DB_USER", "postgres"),
 		DBPassword: getString("DB_PASSWORD", ""),
 		DBName:     getString("DB_NAME", "postgres"),
 		DBSSLMode:  getString("DB_SSLMODE", "disable"),
-	}, nil
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
 }
 
 func getString(key, def string) string {

@@ -17,15 +17,18 @@ type UpdateBuyerInput struct {
 
 type BuyerService interface {
 	// Register validates input and creates a buyer.
-	// Errors: ErrInvalidInput, ErrEmailTaken.
+	// Errors: ErrInvalidInput, ErrEmailAlreadyExists.
 	Register(ctx context.Context, in RegisterBuyerInput) (buyer.Buyer, error)
 
 	// GetByID errors: ErrNotFound.
 	GetByID(ctx context.Context, id int64) (buyer.Buyer, error)
 
+	// List returns paginated buyers.
+	List(ctx context.Context, f ListFilter) ([]buyer.Buyer, error)
+
 	// Update errors: ErrNotFound, ErrInvalidInput.
 	Update(ctx context.Context, id int64, in UpdateBuyerInput) (buyer.Buyer, error)
 
-	// Delete is a soft delete. Errors: ErrNotFound.
+	// Delete errors: ErrNotFound, ErrConflict.
 	Delete(ctx context.Context, id int64) error
 }

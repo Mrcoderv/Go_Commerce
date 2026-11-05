@@ -16,6 +16,8 @@ func NewProductService(repo outgoing.ProductRepository) incoming.ProductService 
 	return &ProductService{repo: repo}
 }
 
+var _ incoming.ProductService = (*ProductService)(nil)
+
 func (s *ProductService) GetByID(ctx context.Context, id int64) (product.Product, error) {
 	return s.repo.GetByID(ctx, id)
 }
@@ -33,9 +35,10 @@ func (s *ProductService) List(ctx context.Context, f incoming.ProductFilter) ([]
 	}
 	return s.repo.List(ctx, f.SellerID, limit, offset)
 }
+
 func (s *ProductService) Create(ctx context.Context, in incoming.CreateProductInput) (product.Product, error) {
 	name := strings.TrimSpace(in.Name)
-	if in.SellerID <= 0 || name == "" || in.UnitPrice <= 0 || in.Stock < 0 {
+	if in.SellerID <= 0 || name == "" || in.Price <= 0 || in.Stock < 0 {
 		return product.Product{}, product.ErrInvalidInput
 	}
 
@@ -43,10 +46,11 @@ func (s *ProductService) Create(ctx context.Context, in incoming.CreateProductIn
 		SellerID:    in.SellerID,
 		Name:        name,
 		Description: strings.TrimSpace(in.Description),
-		UnitPrice:   in.UnitPrice,
+		Price:       in.Price,
 		Stock:       in.Stock,
 	})
 }
+
 func (s *ProductService) CheckAvailability(ctx context.Context, productID int64, qty int) (product.Product, error) {
 	if qty <= 0 {
 		return product.Product{}, product.ErrInvalidInput
@@ -67,6 +71,7 @@ func (s *ProductService) ReduceStock(ctx context.Context, productID int64, qty i
 	}
 	return s.repo.DecreaseStock(ctx, productID, qty)
 }
+
 func (s *ProductService) Update(ctx context.Context, id int64, sellerID int64, in incoming.UpdateProductInput) (product.Product, error) {
 	current, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -86,11 +91,11 @@ func (s *ProductService) Update(ctx context.Context, id int64, sellerID int64, i
 	if in.Description != nil {
 		current.Description = strings.TrimSpace(*in.Description)
 	}
-	if in.UnitPrice != nil {
-		if *in.UnitPrice <= 0 {
+	if in.Price != nil {
+		if *in.Price <= 0 {
 			return product.Product{}, product.ErrInvalidInput
 		}
-		current.UnitPrice = *in.UnitPrice
+		current.Price = *in.Price
 	}
 	if in.Stock != nil {
 		if *in.Stock < 0 {

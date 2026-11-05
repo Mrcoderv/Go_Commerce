@@ -1,8 +1,9 @@
 package repositories
 
 import (
+	"Go_Commerce/internal/adapters/outgoing/postgres"
 	"Go_Commerce/internal/domain/order"
-	"Go_Commerce/internal/ports/incoming"
+	"Go_Commerce/internal/ports/outgoing"
 	"context"
 	"database/sql"
 	"errors"
@@ -10,25 +11,17 @@ import (
 	"time"
 )
 
-type OrderHandler struct {
+type OrderRepository struct {
 	db *sql.DB
 }
 
-func NewOrderHandler(service incoming.OrderService) *OrderHandler {
-	return nil
+func NewOrderRepository(db *sql.DB) *OrderRepository {
+	return &OrderRepository{db: db}
 }
 
-func NewOrderRepository(db *sql.DB) *OrderHandler {
-	return &OrderHandler{db: db}
-}
+var _ outgoing.OrderRepository = (*OrderRepository)(nil)
 
-func (r *OrderHandler) Create(ctx context.Context, o order.Order) (order.Order, error) {
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return o, err
-	}
-	defer tx.Rollback()
-
+func (r *OrderRepository) Create(ctx context.Context, o order.Order) (order.Order, error) {
 	now := time.Now()
 	if o.CreatedAt.IsZero() {
 		o.CreatedAt = now
@@ -38,41 +31,38 @@ func (r *OrderHandler) Create(ctx context.Context, o order.Order) (order.Order, 
 		o.Status = order.StatusPending
 	}
 
-	err = tx.QueryRowContext(ctx,
+	q := postgres.Querier(ctx, r.db)
+	err := q.QueryRowContext(ctx,
 		`INSERT INTO orders (buyer_id, status, total_amount, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5) RETURNING id`,
 		o.BuyerID, o.Status, o.Total, o.CreatedAt, now,
 	).Scan(&o.ID)
 	if err != nil {
-		return o, err
+		return o, fmt.Errorf("create order: %w", err)
 	}
 
 	for i := range o.Items {
 		o.Items[i].OrderID = o.ID
 
-		err = tx.QueryRowContext(ctx,
-			`INSERT INTO order_items (order_id, seller_id, product_name, unit_price, quantity)
+		err = q.QueryRowContext(ctx,
+			`INSERT INTO order_items (order_id, product_id, seller_id, product_name, unit_price, quantity)
 			 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
 			o.ID, o.Items[i].ProductID, o.Items[i].SellerID,
 			o.Items[i].ProductName, o.Items[i].UnitPrice, o.Items[i].Quantity,
 		).Scan(&o.Items[i].ID)
 		if err != nil {
-			return o, err
+			return o, fmt.Errorf("create order item: %w", err)
 		}
-	}
-
-	if err = tx.Commit(); err != nil {
-		return o, err
 	}
 
 	return o, nil
 }
 
-func (r *OrderHandler) GetByID(ctx context.Context, id int64) (order.Order, error) {
+func (r *OrderRepository) GetByID(ctx context.Context, id int64) (order.Order, error) {
 	var o order.Order
 	var status string
 
-	err := r.db.QueryRowContext(ctx,
+	err := postgres.Querier(ctx, r.db).QueryRowContext(ctx,
 		`SELECT id, buyer_id, status, total_amount, created_at FROM orders WHERE id = $1`,
 		id,
 	).Scan(&o.ID, &o.BuyerID, &status, &o.Total, &o.CreatedAt)
@@ -94,14 +84,14 @@ func (r *OrderHandler) GetByID(ctx context.Context, id int64) (order.Order, erro
 	return o, nil
 }
 
-func (r *OrderHandler) loadItems(ctx context.Context, orderID int64) ([]order.Item, error) {
-	rows, err := r.db.QueryContext(ctx,
+func (r *OrderRepository) loadItems(ctx context.Context, orderID int64) ([]order.Item, error) {
+	rows, err := postgres.Querier(ctx, r.db).QueryContext(ctx,
 		`SELECT id, order_id, product_id, seller_id, product_name, unit_price, quantity
-		 FROM order_items WHERE order_id = $1`,
+		 FROM order_items WHERE order_id = $1 ORDER BY id ASC`,
 		orderID,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load items: %w", err)
 	}
 	defer rows.Close()
 
@@ -114,48 +104,54 @@ func (r *OrderHandler) loadItems(ctx context.Context, orderID int64) ([]order.It
 			&item.ID, &item.OrderID, &item.ProductID, &item.SellerID,
 			&item.ProductName, &item.UnitPrice, &item.Quantity,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scan item: %w", err)
 		}
 
 		items = append(items, item)
 	}
 
-	return items, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("load items: %w", err)
+	}
+	if items == nil {
+		items = []order.Item{}
+	}
+	return items, nil
 }
 
-func (r *OrderHandler) ListByBuyer(ctx context.Context, buyerID int64, limit, offset int) ([]order.Order, error) {
-	rows, err := r.db.QueryContext(ctx,
+func (r *OrderRepository) ListByBuyer(ctx context.Context, buyerID int64, limit, offset int) ([]order.Order, error) {
+	rows, err := postgres.Querier(ctx, r.db).QueryContext(ctx,
 		`SELECT id, buyer_id, status, total_amount, created_at
 		 FROM orders WHERE buyer_id = $1
-		 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+		 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`,
 		buyerID, limit, offset,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list orders by buyer: %w", err)
 	}
 	defer rows.Close()
 
 	return r.scanOrders(ctx, rows)
 }
 
-func (r *OrderHandler) ListBySeller(ctx context.Context, sellerID int64, limit, offset int) ([]order.Order, error) {
-	rows, err := r.db.QueryContext(ctx,
+func (r *OrderRepository) ListBySeller(ctx context.Context, sellerID int64, limit, offset int) ([]order.Order, error) {
+	rows, err := postgres.Querier(ctx, r.db).QueryContext(ctx,
 		`SELECT DISTINCT o.id, o.buyer_id, o.status, o.total_amount, o.created_at
 		 FROM orders o
 		 JOIN order_items oi ON oi.order_id = o.id
 		 WHERE oi.seller_id = $1
-		 ORDER BY o.created_at DESC LIMIT $2 OFFSET $3`,
+		 ORDER BY o.created_at DESC, o.id DESC LIMIT $2 OFFSET $3`,
 		sellerID, limit, offset,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list orders by seller: %w", err)
 	}
 	defer rows.Close()
 
 	return r.scanOrders(ctx, rows)
 }
 
-func (r *OrderHandler) scanOrders(ctx context.Context, rows *sql.Rows) ([]order.Order, error) {
+func (r *OrderRepository) scanOrders(ctx context.Context, rows *sql.Rows) ([]order.Order, error) {
 	var orders []order.Order
 
 	for rows.Next() {
@@ -163,7 +159,7 @@ func (r *OrderHandler) scanOrders(ctx context.Context, rows *sql.Rows) ([]order.
 		var status string
 
 		if err := rows.Scan(&o.ID, &o.BuyerID, &status, &o.Total, &o.CreatedAt); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scan order: %w", err)
 		}
 
 		o.Status = order.Status(status)
@@ -177,11 +173,17 @@ func (r *OrderHandler) scanOrders(ctx context.Context, rows *sql.Rows) ([]order.
 		orders = append(orders, o)
 	}
 
-	return orders, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("scan orders: %w", err)
+	}
+	if orders == nil {
+		orders = []order.Order{}
+	}
+	return orders, nil
 }
 
-func (r *OrderHandler) UpdateStatus(ctx context.Context, id int64, status order.Status) error {
-	response, err := r.db.ExecContext(ctx,
+func (r *OrderRepository) UpdateStatus(ctx context.Context, id int64, status order.Status) error {
+	response, err := postgres.Querier(ctx, r.db).ExecContext(ctx,
 		`UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`,
 		status, id,
 	)
