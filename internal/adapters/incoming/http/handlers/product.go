@@ -7,7 +7,6 @@ import (
 	"Go_Commerce/internal/domain/product"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
-	"math"
 )
 
 type ProductHandler struct {
@@ -42,7 +41,7 @@ func (h *ProductHandler) Create(ctx context.Context, req *dto.CreateProductReque
 	if req.Body.UnitPrice > 0 {
 		priceInPaisa = req.Body.UnitPrice
 	} else if req.Body.Price > 0 {
-		priceInPaisa = int64(math.Round(req.Body.Price * 100))
+		priceInPaisa = int64(req.Body.Price)
 	}
 
 	out, err := h.Service.Create(ctx, incoming.CreateProductInput{
@@ -101,7 +100,7 @@ func (h *ProductHandler) Update(ctx context.Context, req *dto.UpdateProductReque
 	if req.Body.UnitPrice != nil {
 		priceInPaisa = req.Body.UnitPrice
 	} else if req.Body.Price != nil {
-		p := int64(math.Round(*req.Body.Price * 100))
+		p := int64(*req.Body.Price)
 		priceInPaisa = &p
 	}
 
