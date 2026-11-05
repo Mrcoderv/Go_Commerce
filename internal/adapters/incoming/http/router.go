@@ -5,7 +5,6 @@ import (
 	"Go_Commerce/internal/adapters/incoming/http/middleware"
 	"Go_Commerce/internal/infrastructure/config"
 	nethttp "net/http"
-	"os"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
@@ -25,24 +24,6 @@ func New(
 	r.Use(middleware.RecoverMiddleware)
 	r.Use(middleware.LoggingMiddleware)
 	r.Use(middleware.AuthMiddleware(cfg))
-
-	filesDir := "./files"
-	if _, err := os.Stat(filesDir); err == nil {
-		fs := nethttp.FileServer(nethttp.Dir(filesDir))
-		r.Handle("/manage-sellers.html", fs)
-		r.Handle("/manage-buyers.html", fs)
-		r.Handle("/seller.html", fs)
-		r.Handle("/buyer.html", fs)
-		r.Handle("/style.css", fs)
-		r.Handle("/files/{rest:.*}", nethttp.StripPrefix("/files/", fs))
-		r.HandleFunc("/", func(w nethttp.ResponseWriter, req *nethttp.Request) {
-			if req.URL.Path == "/" {
-				nethttp.Redirect(w, req, "/manage-sellers.html", nethttp.StatusFound)
-				return
-			}
-			fs.ServeHTTP(w, req)
-		})
-	}
 
 	adapter := humamux.NewAdapter(r)
 	humaCfg := huma.DefaultConfig("Go_Commerce API", "1.0.0")

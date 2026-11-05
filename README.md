@@ -16,7 +16,6 @@ Simple marketplace (Seller, Product, Buyer, Order) in Go. Hexagonal layout, Post
 go run ./cmd/api
 # health: curl http://localhost:$APP_PORT/health
 ```
-HTML pages in `files/` are served at `/` (redirects to `/manage-sellers.html`) on the same server.
 
 ## Test
 ```bash
@@ -30,7 +29,7 @@ TEST_DATABASE_URL='postgres://postgres:postgres@localhost:5432/go_commerce?sslmo
 - `internal/domain` – entities/errors/status
 - `internal/ports/{incoming,outgoing}` – interfaces
 - `internal/core/*` – use-case services
-- `internal/adapters/incoming/http` – Huma handlers/DTO/router, serves `files/`
+- `internal/adapters/incoming/http` – Huma handlers/DTO/router
 - `internal/adapters/outgoing/postgres` – repos + `TxManager`
 - `internal/infrastructure` – config/db/logger/server
 - `migrations` – SQL
