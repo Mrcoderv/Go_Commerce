@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"context"
-	"errors"
-
+	"Go_Commerce/internal/adapters/incoming/http/dto"
+	"Go_Commerce/internal/adapters/incoming/http/middleware"
+	domainauth "Go_Commerce/internal/domain/auth"
 	"Go_Commerce/internal/domain/product"
 	"Go_Commerce/internal/ports/incoming"
-
-	"github.com/danielgtaylor/huma/v2"
+	"context"
+	"math"
 )
 
 type ProductHandler struct {
@@ -18,61 +18,118 @@ func NewProductHandler(s incoming.ProductService) *ProductHandler {
 	return &ProductHandler{Service: s}
 }
 
-type CreateProductRequest struct {
-	Body struct {
-		SellerID    int64  `json:"seller_id" minimum:"1"`
-		Name        string `json:"name" minLength:"1"`
-		Description string `json:"description,omitempty"`
-		UnitPrice   int64  `json:"unit_price" minimum:"1" doc:"Price in paisa"`
-		Stock       int    `json:"stock" minimum:"0"`
+func sellerIDFromAuth(ctx context.Context) (int64, bool) {
+	c, ok := middleware.ClaimsFromContext(ctx)
+	if !ok || c.Role != domainauth.RoleSeller || c.SellerID == nil {
+		return 0, false
 	}
+	return *c.SellerID, true
 }
 
-type CreateProductResponse struct {
-	Body product.Product
-}
+func (h *ProductHandler) Create(ctx context.Context, req *dto.CreateProductRequest) (*dto.ProductResponse, error) {
+	sellerID := req.Body.SellerID
+	if sellerID == 0 {
+		sellerID = req.SellerIDHeader
+	}
+	if id, ok := sellerIDFromAuth(ctx); ok {
+		sellerID = id
+	}
+	if sellerID == 0 {
+		return nil, MapError(domainauth.ErrUnauthorized)
+	}
 
-func (h *ProductHandler) Create(ctx context.Context, req *CreateProductRequest) (*CreateProductResponse, error) {
+	var priceInPaisa int64
+	if req.Body.UnitPrice > 0 {
+		priceInPaisa = req.Body.UnitPrice
+	} else if req.Body.Price > 0 {
+		priceInPaisa = int64(math.Round(req.Body.Price * 100))
+	}
+
 	out, err := h.Service.Create(ctx, incoming.CreateProductInput{
-		SellerID:    req.Body.SellerID,
+		SellerID:    sellerID,
 		Name:        req.Body.Name,
 		Description: req.Body.Description,
-		UnitPrice:   req.Body.UnitPrice,
+		Price:       priceInPaisa,
 		Stock:       req.Body.Stock,
 	})
 	if err != nil {
-		return nil, mapProductError(err)
+		return nil, MapError(err)
 	}
-	return &CreateProductResponse{Body: out}, nil
+	return &dto.ProductResponse{Body: out}, nil
 }
 
-type GetProductRequest struct {
-	ID int64 `path:"id" minimum:"1"`
-}
-
-type GetProductResponse struct {
-	Body product.Product
-}
-
-func (h *ProductHandler) GetByID(ctx context.Context, req *GetProductRequest) (*GetProductResponse, error) {
+func (h *ProductHandler) GetByID(ctx context.Context, req *dto.GetProductRequest) (*dto.ProductResponse, error) {
 	out, err := h.Service.GetByID(ctx, req.ID)
 	if err != nil {
-		return nil, mapProductError(err)
+		return nil, MapError(err)
 	}
-	return &GetProductResponse{Body: out}, nil
+	return &dto.ProductResponse{Body: out}, nil
 }
 
-func mapProductError(err error) error {
-	switch {
-	case errors.Is(err, product.ErrNotFound):
-		return huma.Error404NotFound("product not found")
-	case errors.Is(err, product.ErrInvalidInput):
-		return huma.Error400BadRequest("invalid input")
-	case errors.Is(err, product.ErrForbidden):
-		return huma.Error403Forbidden("you do not own this product")
-	case errors.Is(err, product.ErrInsufficientStock):
-		return huma.Error409Conflict("insufficient stock")
-	default:
-		return huma.Error500InternalServerError("internal error")
+func (h *ProductHandler) List(ctx context.Context, req *dto.ListProductsRequest) (*dto.ListProductsResponse, error) {
+	var sellerID *int64
+	if req.SellerID > 0 {
+		sellerID = &req.SellerID
 	}
+	out, err := h.Service.List(ctx, incoming.ProductFilter{
+		SellerID: sellerID,
+		Limit:    req.Limit,
+		Offset:   req.Offset,
+	})
+	if err != nil {
+		return nil, MapError(err)
+	}
+	if out == nil {
+		out = []product.Product{}
+	}
+	return &dto.ListProductsResponse{Body: out}, nil
+}
+
+func (h *ProductHandler) Update(ctx context.Context, req *dto.UpdateProductRequest) (*dto.ProductResponse, error) {
+	sellerID := req.Body.SellerID
+	if sellerID == 0 {
+		sellerID = req.SellerIDHeader
+	}
+	if id, ok := sellerIDFromAuth(ctx); ok {
+		sellerID = id
+	}
+	if sellerID == 0 {
+		return nil, MapError(domainauth.ErrUnauthorized)
+	}
+
+	var priceInPaisa *int64
+	if req.Body.UnitPrice != nil {
+		priceInPaisa = req.Body.UnitPrice
+	} else if req.Body.Price != nil {
+		p := int64(math.Round(*req.Body.Price * 100))
+		priceInPaisa = &p
+	}
+
+	out, err := h.Service.Update(ctx, req.ID, sellerID, incoming.UpdateProductInput{
+		Name:        req.Body.Name,
+		Description: req.Body.Description,
+		Price:       priceInPaisa,
+		Stock:       req.Body.Stock,
+	})
+	if err != nil {
+		return nil, MapError(err)
+	}
+	return &dto.ProductResponse{Body: out}, nil
+}
+
+func (h *ProductHandler) Delete(ctx context.Context, req *dto.DeleteProductRequest) (*struct{}, error) {
+	sellerID := req.SellerIDHeader
+	if sellerID == 0 {
+		sellerID = req.SellerIDQuery
+	}
+	if id, ok := sellerIDFromAuth(ctx); ok {
+		sellerID = id
+	}
+	if sellerID == 0 {
+		return nil, MapError(domainauth.ErrUnauthorized)
+	}
+	if err := h.Service.Delete(ctx, req.ID, sellerID); err != nil {
+		return nil, MapError(err)
+	}
+	return nil, nil
 }

@@ -3,6 +3,7 @@ package buyer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/mail"
 	"strings"
 
@@ -18,11 +19,10 @@ type BuyerService struct {
 func NewBuyerService(repo outgoing.BuyerRepository) incoming.BuyerService {
 	return &BuyerService{repo: repo}
 }
-func (s *BuyerService) Register(
-	ctx context.Context,
-	in incoming.RegisterBuyerInput,
-) (buyer.Buyer, error) {
-	// spacig remove
+
+var _ incoming.BuyerService = (*BuyerService)(nil)
+
+func (s *BuyerService) Register(ctx context.Context, in incoming.RegisterBuyerInput) (buyer.Buyer, error) {
 	name := strings.TrimSpace(in.Name)
 	email := strings.ToLower(strings.TrimSpace(in.Email))
 
@@ -33,17 +33,16 @@ func (s *BuyerService) Register(
 	if _, err := mail.ParseAddress(email); err != nil {
 		return buyer.Buyer{}, buyer.ErrInvalidInput
 	}
-	// alredy exist email
+
 	existingBuyer, err := s.repo.GetByEmail(ctx, email)
 	if err == nil && existingBuyer.ID != 0 {
 		return buyer.Buyer{}, buyer.ErrEmailAlreadyExists
 	}
 
 	if err != nil && !errors.Is(err, buyer.ErrNotFound) {
-		return buyer.Buyer{}, err
+		return buyer.Buyer{}, fmt.Errorf("check email: %w", err)
 	}
 
-	// Create the new buyer
 	newBuyer := buyer.Buyer{
 		Name:    name,
 		Email:   email,
@@ -58,19 +57,37 @@ func (s *BuyerService) GetByID(ctx context.Context, id int64) (buyer.Buyer, erro
 	return s.repo.GetByID(ctx, id)
 }
 
+func (s *BuyerService) List(ctx context.Context, f incoming.ListFilter) ([]buyer.Buyer, error) {
+	limit, offset := f.Limit, f.Offset
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.repo.List(ctx, limit, offset)
+}
+
 func (s *BuyerService) Update(ctx context.Context, id int64, in incoming.UpdateBuyerInput) (buyer.Buyer, error) {
 	b, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return buyer.Buyer{}, err
 	}
 	if in.Name != nil {
-		b.Name = *in.Name
+		name := strings.TrimSpace(*in.Name)
+		if name == "" {
+			return buyer.Buyer{}, buyer.ErrInvalidInput
+		}
+		b.Name = name
 	}
 	if in.Phone != nil {
-		b.Phone = *in.Phone
+		b.Phone = strings.TrimSpace(*in.Phone)
 	}
 	if in.Address != nil {
-		b.Address = *in.Address
+		b.Address = strings.TrimSpace(*in.Address)
 	}
 	return s.repo.Update(ctx, b)
 }

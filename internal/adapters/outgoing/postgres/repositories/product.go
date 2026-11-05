@@ -21,17 +21,16 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 	return &ProductRepository{db: db}
 }
 
-// Compile-time check: the build fails if a method is missing.
 var _ outgoing.ProductRepository = (*ProductRepository)(nil)
 
-const productColumns = `id, seller_id, product_name, product_description, unit_price, stock`
+const productColumns = `id, seller_id, name, description, price, stock`
 
 func (r *ProductRepository) Create(ctx context.Context, p product.Product) (product.Product, error) {
-	const q = `INSERT INTO products (seller_id, product_name, product_description, unit_price, stock)
+	const q = `INSERT INTO products (seller_id, name, description, price, stock)
 	           VALUES ($1, $2, $3, $4, $5) RETURNING id`
 
 	err := postgres.Querier(ctx, r.db).
-		QueryRowContext(ctx, q, p.SellerID, p.Name, p.Description, p.UnitPrice, p.Stock).
+		QueryRowContext(ctx, q, p.SellerID, p.Name, p.Description, p.Price, p.Stock).
 		Scan(&p.ID)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -49,7 +48,7 @@ func (r *ProductRepository) GetByID(ctx context.Context, id int64) (product.Prod
 	var p product.Product
 	err := postgres.Querier(ctx, r.db).
 		QueryRowContext(ctx, q, id).
-		Scan(&p.ID, &p.SellerID, &p.Name, &p.Description, &p.UnitPrice, &p.Stock)
+		Scan(&p.ID, &p.SellerID, &p.Name, &p.Description, &p.Price, &p.Stock)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return product.Product{}, product.ErrNotFound
@@ -73,7 +72,7 @@ func (r *ProductRepository) List(ctx context.Context, sellerID *int64, limit, of
 	products := []product.Product{}
 	for rows.Next() {
 		var p product.Product
-		if err := rows.Scan(&p.ID, &p.SellerID, &p.Name, &p.Description, &p.UnitPrice, &p.Stock); err != nil {
+		if err := rows.Scan(&p.ID, &p.SellerID, &p.Name, &p.Description, &p.Price, &p.Stock); err != nil {
 			return nil, fmt.Errorf("scan product: %w", err)
 		}
 		products = append(products, p)
@@ -86,14 +85,14 @@ func (r *ProductRepository) List(ctx context.Context, sellerID *int64, limit, of
 
 func (r *ProductRepository) Update(ctx context.Context, p product.Product) (product.Product, error) {
 	const q = `UPDATE products
-	           SET product_name = $1, product_description = $2, unit_price = $3, stock = $4, updated_at = NOW()
+	           SET name = $1, description = $2, price = $3, stock = $4, updated_at = NOW()
 	           WHERE id = $5 AND deleted_at IS NULL
 	           RETURNING ` + productColumns
 
 	var out product.Product
 	err := postgres.Querier(ctx, r.db).
-		QueryRowContext(ctx, q, p.Name, p.Description, p.UnitPrice, p.Stock, p.ID).
-		Scan(&out.ID, &out.SellerID, &out.Name, &out.Description, &out.UnitPrice, &out.Stock)
+		QueryRowContext(ctx, q, p.Name, p.Description, p.Price, p.Stock, p.ID).
+		Scan(&out.ID, &out.SellerID, &out.Name, &out.Description, &out.Price, &out.Stock)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return product.Product{}, product.ErrNotFound
@@ -104,6 +103,16 @@ func (r *ProductRepository) Update(ctx context.Context, p product.Product) (prod
 }
 
 func (r *ProductRepository) Delete(ctx context.Context, id int64) error {
+	// Check if the product has order items
+	var count int
+	err := postgres.Querier(ctx, r.db).QueryRowContext(ctx, `SELECT COUNT(*) FROM order_items WHERE product_id = $1`, id).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("check product orders: %w", err)
+	}
+	if count > 0 {
+		return product.ErrConflict
+	}
+
 	const q = `UPDATE products SET deleted_at = NOW(), updated_at = NOW()
 	           WHERE id = $1 AND deleted_at IS NULL`
 
@@ -121,8 +130,6 @@ func (r *ProductRepository) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-// DecreaseStock is ONE statement: the check and the decrease cannot be split
-// by another buyer. Zero rows means not enough stock (or no such product).
 func (r *ProductRepository) DecreaseStock(ctx context.Context, id int64, qty int) error {
 	const q = `UPDATE products SET stock = stock - $1, updated_at = NOW()
 	           WHERE id = $2 AND stock >= $1 AND deleted_at IS NULL`
@@ -136,6 +143,12 @@ func (r *ProductRepository) DecreaseStock(ctx context.Context, id int64, qty int
 		return fmt.Errorf("decrease stock: %w", err)
 	}
 	if n == 0 {
+		// check if product exists at all
+		var exists bool
+		_ = postgres.Querier(ctx, r.db).QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM products WHERE id = $1 AND deleted_at IS NULL)`, id).Scan(&exists)
+		if !exists {
+			return product.ErrNotFound
+		}
 		return product.ErrInsufficientStock
 	}
 	return nil

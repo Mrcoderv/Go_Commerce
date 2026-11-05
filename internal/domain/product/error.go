@@ -7,4 +7,5 @@ var (
 	ErrInsufficientStock = errors.New("insufficient stock")
 	ErrForbidden         = errors.New("forbidden")
 	ErrInvalidInput      = errors.New("invalid input")
+	ErrConflict          = errors.New("product cannot be deleted: has existing orders")
 )

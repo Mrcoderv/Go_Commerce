@@ -68,6 +68,7 @@ func (r *SellerRepository) GetByEmail(ctx context.Context, email string) (seller
 	}
 	return s, nil
 }
+
 // Compile-time check: fails the build if a method is missing.
 var _ outgoing.SellerRepository = (*SellerRepository)(nil)
 

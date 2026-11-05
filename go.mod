@@ -4,10 +4,12 @@ go 1.27.0
 
 require (
 	github.com/danielgtaylor/huma/v2 v2.40.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.12.0
 	github.com/joho/godotenv v1.5.1
 	go.uber.org/fx v1.24.0
+	golang.org/x/crypto v0.58.0
 )
 
 require (
