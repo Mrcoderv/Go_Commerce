@@ -14,7 +14,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_buyers_email ON buyers (LOWER(email));
 CREATE TABLE IF NOT EXISTS orders (
     id            BIGSERIAL   PRIMARY KEY,
     buyer_id      BIGINT      NOT NULL REFERENCES buyers (id) ON DELETE RESTRICT,
-    status        VARCHAR(30) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
+    status        VARCHAR(30) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','returned', 'confirmed', 'shipped', 'delivered', 'cancelled')),
     total_amount  BIGINT      NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
