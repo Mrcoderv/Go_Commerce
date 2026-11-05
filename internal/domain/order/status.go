@@ -10,14 +10,16 @@ const (
 	StatusShipped   Status = "shipped"
 	StatusDelivered Status = "delivered"
 	StatusCancelled Status = "cancelled"
+	StatusReturned  Status = "returned"
 )
 
 var transitions = map[Status][]Status{
 	StatusPending:   {StatusConfirmed, StatusCancelled},
 	StatusConfirmed: {StatusShipped, StatusCancelled},
 	StatusShipped:   {StatusDelivered},
-	StatusDelivered: {},
+	StatusDelivered: {StatusReturned},
 	StatusCancelled: {},
+	StatusReturned:  {},
 }
 
 func (s Status) CanTransitionTo(next Status) bool {
