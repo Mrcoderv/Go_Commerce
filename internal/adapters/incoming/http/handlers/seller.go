@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"Go_Commerce/internal/adapters/incoming/http/dto"
+	domainauth "Go_Commerce/internal/domain/auth"
 	"Go_Commerce/internal/domain/seller"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
@@ -29,6 +30,13 @@ func (h *SellerHandler) Register(ctx context.Context, req *dto.RegisterSellerReq
 }
 
 func (h *SellerHandler) GetByID(ctx context.Context, req *dto.GetSellerRequest) (*dto.SellerResponse, error) {
+	claims, err := sellerClaims(ctx)
+	if err != nil || *claims.SellerID != req.ID {
+		if err == nil {
+			err = domainauth.ErrForbidden
+		}
+		return nil, MapError(err)
+	}
 	out, err := h.Service.GetByID(ctx, req.ID)
 	if err != nil {
 		return nil, MapError(err)
@@ -48,6 +56,13 @@ func (h *SellerHandler) List(ctx context.Context, req *dto.ListSellersRequest) (
 }
 
 func (h *SellerHandler) Update(ctx context.Context, req *dto.UpdateSellerRequest) (*dto.SellerResponse, error) {
+	claims, err := sellerClaims(ctx)
+	if err != nil || *claims.SellerID != req.ID {
+		if err == nil {
+			err = domainauth.ErrForbidden
+		}
+		return nil, MapError(err)
+	}
 	out, err := h.Service.Update(ctx, req.ID, incoming.UpdateSellerInput{
 		Name:    req.Body.Name,
 		Email:   req.Body.Email,
@@ -61,6 +76,13 @@ func (h *SellerHandler) Update(ctx context.Context, req *dto.UpdateSellerRequest
 }
 
 func (h *SellerHandler) Delete(ctx context.Context, req *dto.DeleteSellerRequest) (*struct{}, error) {
+	claims, err := sellerClaims(ctx)
+	if err != nil || *claims.SellerID != req.ID {
+		if err == nil {
+			err = domainauth.ErrForbidden
+		}
+		return nil, MapError(err)
+	}
 	if err := h.Service.Delete(ctx, req.ID); err != nil {
 		return nil, MapError(err)
 	}

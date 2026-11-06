@@ -26,19 +26,13 @@ func sellerIDFromAuth(ctx context.Context) (int64, bool) {
 }
 
 func (h *ProductHandler) Create(ctx context.Context, req *dto.CreateProductRequest) (*dto.ProductResponse, error) {
-	sellerID := req.Body.SellerID
-	if sellerID == 0 {
-		sellerID = req.SellerIDHeader
-	}
-	if id, ok := sellerIDFromAuth(ctx); ok {
-		sellerID = id
-	}
-	if sellerID == 0 {
-		return nil, MapError(domainauth.ErrUnauthorized)
+	claims, err := sellerClaims(ctx)
+	if err != nil {
+		return nil, MapError(err)
 	}
 
 	out, err := h.Service.Create(ctx, incoming.CreateProductInput{
-		SellerID:    sellerID,
+		SellerID:    *claims.SellerID,
 		Name:        req.Body.Name,
 		Description: req.Body.Description,
 		Price:       req.Body.Price,
@@ -78,15 +72,9 @@ func (h *ProductHandler) List(ctx context.Context, req *dto.ListProductsRequest)
 }
 
 func (h *ProductHandler) Update(ctx context.Context, req *dto.UpdateProductRequest) (*dto.ProductResponse, error) {
-	sellerID := req.Body.SellerID
-	if sellerID == 0 {
-		sellerID = req.SellerIDHeader
-	}
-	if id, ok := sellerIDFromAuth(ctx); ok {
-		sellerID = id
-	}
-	if sellerID == 0 {
-		return nil, MapError(domainauth.ErrUnauthorized)
+	claims, err := sellerClaims(ctx)
+	if err != nil {
+		return nil, MapError(err)
 	}
 
 	var priceInPaisa *float64
@@ -95,7 +83,7 @@ func (h *ProductHandler) Update(ctx context.Context, req *dto.UpdateProductReque
 		priceInPaisa = &p
 	}
 
-	out, err := h.Service.Update(ctx, req.ID, sellerID, incoming.UpdateProductInput{
+	out, err := h.Service.Update(ctx, req.ID, *claims.SellerID, incoming.UpdateProductInput{
 		Name:        req.Body.Name,
 		Description: req.Body.Description,
 		Price:       priceInPaisa,
@@ -108,17 +96,11 @@ func (h *ProductHandler) Update(ctx context.Context, req *dto.UpdateProductReque
 }
 
 func (h *ProductHandler) Delete(ctx context.Context, req *dto.DeleteProductRequest) (*struct{}, error) {
-	sellerID := req.SellerIDHeader
-	if sellerID == 0 {
-		sellerID = req.SellerIDQuery
+	claims, err := sellerClaims(ctx)
+	if err != nil {
+		return nil, MapError(err)
 	}
-	if id, ok := sellerIDFromAuth(ctx); ok {
-		sellerID = id
-	}
-	if sellerID == 0 {
-		return nil, MapError(domainauth.ErrUnauthorized)
-	}
-	if err := h.Service.Delete(ctx, req.ID, sellerID); err != nil {
+	if err := h.Service.Delete(ctx, req.ID, *claims.SellerID); err != nil {
 		return nil, MapError(err)
 	}
 	return nil, nil

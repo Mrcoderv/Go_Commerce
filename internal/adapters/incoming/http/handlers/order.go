@@ -26,12 +26,9 @@ func buyerIDFromAuth(ctx context.Context) (int64, bool) {
 }
 
 func (h *OrderHandler) PlaceOrder(ctx context.Context, req *dto.PlaceOrderRequest) (*dto.OrderResponse, error) {
-	buyerID := req.Body.BuyerID
-	if id, ok := buyerIDFromAuth(ctx); ok {
-		buyerID = id
-	}
-	if buyerID == 0 {
-		return nil, MapError(domainauth.ErrUnauthorized)
+	claims, err := buyerClaims(ctx)
+	if err != nil {
+		return nil, MapError(err)
 	}
 	items := make([]incoming.OrderItemInput, len(req.Body.Items))
 	for i, it := range req.Body.Items {
@@ -39,7 +36,7 @@ func (h *OrderHandler) PlaceOrder(ctx context.Context, req *dto.PlaceOrderReques
 	}
 
 	o, err := h.Service.PlaceOrder(ctx, incoming.PlaceOrderInput{
-		BuyerID: buyerID,
+		BuyerID: *claims.BuyerID,
 		Items:   items,
 	})
 	if err != nil {
@@ -49,14 +46,32 @@ func (h *OrderHandler) PlaceOrder(ctx context.Context, req *dto.PlaceOrderReques
 }
 
 func (h *OrderHandler) GetOrder(ctx context.Context, req *dto.GetOrderRequest) (*dto.OrderResponse, error) {
+	claims, err := orderAccessClaims(ctx)
+	if err != nil {
+		return nil, MapError(err)
+	}
 	o, err := h.Service.GetByID(ctx, req.ID)
 	if err != nil {
 		return nil, MapError(err)
+	}
+	if !canAccessOrder(claims, o) {
+		return nil, MapError(domainauth.ErrForbidden)
 	}
 	return &dto.OrderResponse{Body: o}, nil
 }
 
 func (h *OrderHandler) UpdateStatus(ctx context.Context, req *dto.UpdateOrderStatusRequest) (*dto.OrderResponse, error) {
+	claims, err := sellerClaims(ctx)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	current, err := h.Service.GetByID(ctx, req.ID)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	if !canAccessOrder(claims, current) {
+		return nil, MapError(domainauth.ErrForbidden)
+	}
 	o, err := h.Service.UpdateStatus(ctx, req.ID, req.Body.Status)
 	if err != nil {
 		return nil, MapError(err)
@@ -65,6 +80,17 @@ func (h *OrderHandler) UpdateStatus(ctx context.Context, req *dto.UpdateOrderSta
 }
 
 func (h *OrderHandler) Cancel(ctx context.Context, req *dto.CancelOrderRequest) (*dto.OrderResponse, error) {
+	claims, err := buyerClaims(ctx)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	current, err := h.Service.GetByID(ctx, req.ID)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	if !canAccessOrder(claims, current) {
+		return nil, MapError(domainauth.ErrForbidden)
+	}
 	if err := h.Service.Cancel(ctx, req.ID); err != nil {
 		return nil, MapError(err)
 	}
@@ -76,7 +102,11 @@ func (h *OrderHandler) Cancel(ctx context.Context, req *dto.CancelOrderRequest) 
 }
 
 func (h *OrderHandler) ListByBuyer(ctx context.Context, req *dto.ListBuyerOrdersRequest) (*dto.ListOrdersResponse, error) {
-	orders, err := h.Service.ListByBuyer(ctx, req.BuyerID, incoming.ListFilter{Limit: req.Limit, Offset: req.Offset})
+	claims, err := buyerClaims(ctx)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	orders, err := h.Service.ListByBuyer(ctx, *claims.BuyerID, incoming.ListFilter{Limit: req.Limit, Offset: req.Offset})
 	if err != nil {
 		return nil, MapError(err)
 	}
@@ -87,7 +117,11 @@ func (h *OrderHandler) ListByBuyer(ctx context.Context, req *dto.ListBuyerOrders
 }
 
 func (h *OrderHandler) ListBySeller(ctx context.Context, req *dto.ListSellerOrdersRequest) (*dto.ListOrdersResponse, error) {
-	orders, err := h.Service.ListBySeller(ctx, req.SellerID, incoming.ListFilter{Limit: req.Limit, Offset: req.Offset})
+	claims, err := sellerClaims(ctx)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	orders, err := h.Service.ListBySeller(ctx, *claims.SellerID, incoming.ListFilter{Limit: req.Limit, Offset: req.Offset})
 	if err != nil {
 		return nil, MapError(err)
 	}
