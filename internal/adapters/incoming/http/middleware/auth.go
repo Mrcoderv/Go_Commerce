@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	coreauth "Go_Commerce/internal/core/auth"
-	domainauth "Go_Commerce/internal/domain/auth"
 	"Go_Commerce/internal/infrastructure/config"
 )
 
@@ -29,19 +28,6 @@ func AuthMiddleware(cfg *config.Config) func(http.Handler) http.Handler {
 				if claims, err := coreauth.ParseToken(cfg.JWTSecret, strings.TrimPrefix(h, "Bearer ")); err == nil {
 					r = r.WithContext(WithClaims(r.Context(), claims))
 				}
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-func RequireRole(role domainauth.Role) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			c, ok := ClaimsFromContext(r.Context())
-			if !ok || c.Role != role {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
 			}
 			next.ServeHTTP(w, r)
 		})

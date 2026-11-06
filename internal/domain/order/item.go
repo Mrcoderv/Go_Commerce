@@ -9,5 +9,3 @@ type Item struct {
 	UnitPrice   int64  `json:"unit_price"`   // snapshot, paisa
 	Quantity    int    `json:"quantity"`
 }
-
-type OrderItem = Item

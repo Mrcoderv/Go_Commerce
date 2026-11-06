@@ -2,6 +2,7 @@ package order
 
 import (
 	"Go_Commerce/internal/domain/order"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"Go_Commerce/internal/ports/outgoing"
 	"context"
@@ -14,6 +15,7 @@ type OrderService struct {
 	buyers   outgoing.BuyerRepository
 	products outgoing.ProductRepository
 	tx       outgoing.TxManager
+	log      logger.Logger
 }
 
 func NewOrderService(
@@ -21,8 +23,9 @@ func NewOrderService(
 	buyers outgoing.BuyerRepository,
 	products outgoing.ProductRepository,
 	tx outgoing.TxManager,
+	log logger.Logger,
 ) incoming.OrderService {
-	return &OrderService{repo: repo, buyers: buyers, products: products, tx: tx}
+	return &OrderService{repo: repo, buyers: buyers, products: products, tx: tx, log: log}
 }
 
 var _ incoming.OrderService = (*OrderService)(nil)
@@ -69,10 +72,10 @@ func (s *OrderService) PlaceOrder(ctx context.Context, in incoming.PlaceOrderInp
 				ProductID:   p.ID,
 				SellerID:    p.SellerID,
 				ProductName: p.Name,
-				UnitPrice:   int64(p.Price),
+				UnitPrice:   p.Price, // snapshot: paisa at order time
 				Quantity:    it.Quantity,
 			})
-			o.Total += int64(p.Price * float64(it.Quantity))
+			o.Total += p.Price * int64(it.Quantity)
 		}
 
 		// Save order
@@ -84,8 +87,16 @@ func (s *OrderService) PlaceOrder(ctx context.Context, in incoming.PlaceOrderInp
 		return nil
 	})
 	if err != nil {
+		s.log.Warn("order placement failed", "buyer_id", in.BuyerID, "error", err)
 		return order.Order{}, err
 	}
+
+	s.log.Info("order placed",
+		"order_id", placed.ID,
+		"buyer_id", placed.BuyerID,
+		"total_paisa", placed.Total,
+		"items", len(placed.Items),
+	)
 	return placed, nil
 }
 
@@ -100,7 +111,14 @@ func (s *OrderService) ListByBuyer(ctx context.Context, buyerID int64, f incomin
 
 func (s *OrderService) ListBySeller(ctx context.Context, sellerID int64, f incoming.ListFilter) ([]order.Order, error) {
 	limit, offset := clampFilter(f)
-	return s.repo.ListBySeller(ctx, sellerID, limit, offset)
+	orders, err := s.repo.ListBySeller(ctx, sellerID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	for i := range orders {
+		orders[i] = order.ForSeller(orders[i], sellerID)
+	}
+	return orders, nil
 }
 
 func (s *OrderService) UpdateStatus(ctx context.Context, id int64, next order.Status) (order.Order, error) {
@@ -120,11 +138,12 @@ func (s *OrderService) UpdateStatus(ctx context.Context, id int64, next order.St
 	}
 
 	o.Status = next
+	s.log.Info("order status updated", "order_id", id, "status", next)
 	return o, nil
 }
 
 func (s *OrderService) Cancel(ctx context.Context, id int64) error {
-	return s.tx.WithinTx(ctx, func(ctx context.Context) error {
+	err := s.tx.WithinTx(ctx, func(ctx context.Context) error {
 		o, err := s.repo.GetByID(ctx, id)
 		if err != nil {
 			return err
@@ -139,6 +158,12 @@ func (s *OrderService) Cancel(ctx context.Context, id int64) error {
 		}
 		return s.repo.UpdateStatus(ctx, id, order.StatusCancelled)
 	})
+	if err != nil {
+		s.log.Warn("order cancellation failed", "order_id", id, "error", err)
+		return err
+	}
+	s.log.Info("order cancelled", "order_id", id)
+	return nil
 }
 
 func clampFilter(f incoming.ListFilter) (int, int) {

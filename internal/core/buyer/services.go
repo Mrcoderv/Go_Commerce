@@ -8,16 +8,18 @@ import (
 	"strings"
 
 	"Go_Commerce/internal/domain/buyer"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"Go_Commerce/internal/ports/outgoing"
 )
 
 type BuyerService struct {
 	repo outgoing.BuyerRepository
+	log  logger.Logger
 }
 
-func NewBuyerService(repo outgoing.BuyerRepository) incoming.BuyerService {
-	return &BuyerService{repo: repo}
+func NewBuyerService(repo outgoing.BuyerRepository, log logger.Logger) incoming.BuyerService {
+	return &BuyerService{repo: repo, log: log}
 }
 
 var _ incoming.BuyerService = (*BuyerService)(nil)
@@ -50,7 +52,13 @@ func (s *BuyerService) Register(ctx context.Context, in incoming.RegisterBuyerIn
 		Address: strings.TrimSpace(in.Address),
 	}
 
-	return s.repo.Create(ctx, newBuyer)
+	created, err := s.repo.Create(ctx, newBuyer)
+	if err != nil {
+		s.log.Error("buyer registration failed", "email", email, "error", err)
+		return buyer.Buyer{}, err
+	}
+	s.log.Info("buyer registered", "buyer_id", created.ID)
+	return created, nil
 }
 
 func (s *BuyerService) GetByID(ctx context.Context, id int64) (buyer.Buyer, error) {
@@ -89,9 +97,19 @@ func (s *BuyerService) Update(ctx context.Context, id int64, in incoming.UpdateB
 	if in.Address != nil {
 		b.Address = strings.TrimSpace(*in.Address)
 	}
-	return s.repo.Update(ctx, b)
+	updated, err := s.repo.Update(ctx, b)
+	if err != nil {
+		s.log.Error("buyer update failed", "buyer_id", id, "error", err)
+		return buyer.Buyer{}, err
+	}
+	s.log.Info("buyer updated", "buyer_id", id)
+	return updated, nil
 }
 
 func (s *BuyerService) Delete(ctx context.Context, id int64) error {
-	return s.repo.Delete(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+	s.log.Info("buyer deleted", "buyer_id", id)
+	return nil
 }

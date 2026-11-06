@@ -5,6 +5,7 @@ import (
 	buyerdomain "Go_Commerce/internal/domain/buyer"
 	orderdomain "Go_Commerce/internal/domain/order"
 	productdomain "Go_Commerce/internal/domain/product"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
 	"errors"
@@ -168,7 +169,7 @@ func setupOrderService() (*fakeBuyerRepo, *fakeProductRepo, *fakeOrderRepo, inco
 	orders := &fakeOrderRepo{orders: make(map[int64]orderdomain.Order), nextID: 1}
 	tx := &fakeTxManager{productRepo: products}
 
-	svc := order.NewOrderService(orders, buyers, products, tx)
+	svc := order.NewOrderService(orders, buyers, products, tx, logger.NewNop())
 	return buyers, products, orders, svc
 }
 
@@ -296,6 +297,85 @@ func TestOrderService_UpdateStatus_Transitions(t *testing.T) {
 	}
 	if updated.Status != orderdomain.StatusDelivered {
 		t.Errorf("expected status delivered, got %s", updated.Status)
+	}
+}
+
+func TestOrderService_PlaceOrder_SnapshotsPrice(t *testing.T) {
+	buyers, products, _, svc := setupOrderService()
+	ctx := context.Background()
+
+	buyers.buyers[1] = buyerdomain.Buyer{ID: 1, Name: "Buyer 1"}
+	products.products[1] = productdomain.Product{ID: 1, SellerID: 5, Name: "Item 1", Price: 49950, Stock: 10} // NPR 499.50
+
+	o, err := svc.PlaceOrder(ctx, incoming.PlaceOrderInput{
+		BuyerID: 1,
+		Items:   []incoming.OrderItemInput{{ProductID: 1, Quantity: 2}},
+	})
+	if err != nil {
+		t.Fatalf("place order failed: %v", err)
+	}
+	if o.Items[0].UnitPrice != 49950 || o.Total != 99900 {
+		t.Fatalf("expected snapshot 49950 x2 = 99900 paisa, got unit=%d total=%d", o.Items[0].UnitPrice, o.Total)
+	}
+
+	// The product price changes after placement; the order must keep its snapshot.
+	p := products.products[1]
+	p.Price = 123456
+	products.products[1] = p
+
+	got, err := svc.GetByID(ctx, o.ID)
+	if err != nil {
+		t.Fatalf("get order failed: %v", err)
+	}
+	if got.Items[0].UnitPrice != 49950 || got.Total != 99900 {
+		t.Errorf("order snapshot changed: unit=%d total=%d", got.Items[0].UnitPrice, got.Total)
+	}
+}
+
+func TestOrderService_ListBySeller_HidesOtherSellersItems(t *testing.T) {
+	buyers, products, _, svc := setupOrderService()
+	ctx := context.Background()
+
+	buyers.buyers[1] = buyerdomain.Buyer{ID: 1, Name: "Buyer 1"}
+	products.products[10] = productdomain.Product{ID: 10, SellerID: 5, Name: "Seller 5 item", Price: 1000, Stock: 10}
+	products.products[20] = productdomain.Product{ID: 20, SellerID: 7, Name: "Seller 7 item", Price: 2000, Stock: 10}
+
+	_, err := svc.PlaceOrder(ctx, incoming.PlaceOrderInput{
+		BuyerID: 1,
+		Items: []incoming.OrderItemInput{
+			{ProductID: 10, Quantity: 2}, // seller 5: 2000
+			{ProductID: 20, Quantity: 1}, // seller 7: 2000
+		},
+	})
+	if err != nil {
+		t.Fatalf("place order failed: %v", err)
+	}
+
+	// Seller 5 must only see their own item and subtotal.
+	orders, err := svc.ListBySeller(ctx, 5, incoming.ListFilter{})
+	if err != nil {
+		t.Fatalf("list by seller failed: %v", err)
+	}
+	if len(orders) != 1 {
+		t.Fatalf("expected 1 order for seller 5, got %d", len(orders))
+	}
+	if len(orders[0].Items) != 1 || orders[0].Items[0].SellerID != 5 {
+		t.Fatalf("expected only seller 5's item, got %+v", orders[0].Items)
+	}
+	if orders[0].Total != 2000 {
+		t.Errorf("expected seller 5 subtotal 2000, got %d", orders[0].Total)
+	}
+
+	// Seller 7 sees only their own item too.
+	orders, err = svc.ListBySeller(ctx, 7, incoming.ListFilter{})
+	if err != nil {
+		t.Fatalf("list by seller failed: %v", err)
+	}
+	if len(orders) != 1 || len(orders[0].Items) != 1 || orders[0].Items[0].SellerID != 7 {
+		t.Fatalf("expected only seller 7's item, got %+v", orders)
+	}
+	if orders[0].Total != 2000 {
+		t.Errorf("expected seller 7 subtotal 2000, got %d", orders[0].Total)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/outgoing"
 )
 
@@ -28,11 +29,12 @@ func Querier(ctx context.Context, db *sql.DB) DBTX {
 }
 
 type TxManager struct {
-	db *sql.DB
+	db  *sql.DB
+	log logger.Logger
 }
 
-func NewTxManager(db *sql.DB) outgoing.TxManager {
-	return &TxManager{db: db}
+func NewTxManager(db *sql.DB, log logger.Logger) outgoing.TxManager {
+	return &TxManager{db: db, log: log}
 }
 
 func (m *TxManager) WithinTx(ctx context.Context, fn func(ctx context.Context) error) error {
@@ -43,11 +45,14 @@ func (m *TxManager) WithinTx(ctx context.Context, fn func(ctx context.Context) e
 
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
+		m.log.Error("begin transaction failed", "error", err)
 		return fmt.Errorf("begin transaction: %w", err)
 	}
+	m.log.Debug("transaction started")
 
 	defer func() {
 		if p := recover(); p != nil {
+			m.log.Error("transaction rollback after panic", "error", p)
 			_ = tx.Rollback()
 			panic(p)
 		}
@@ -55,13 +60,17 @@ func (m *TxManager) WithinTx(ctx context.Context, fn func(ctx context.Context) e
 
 	if err := fn(context.WithValue(ctx, txKey{}, tx)); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			m.log.Error("transaction rollback failed", "error", rbErr)
 			return fmt.Errorf("%w (rollback failed: %v)", err, rbErr)
 		}
+		m.log.Warn("transaction rolled back", "error", err)
 		return err
 	}
 
 	if err := tx.Commit(); err != nil {
+		m.log.Error("transaction commit failed", "error", err)
 		return fmt.Errorf("commit transaction: %w", err)
 	}
+	m.log.Debug("transaction committed")
 	return nil
 }

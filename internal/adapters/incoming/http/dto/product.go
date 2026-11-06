@@ -3,14 +3,11 @@ package dto
 import "Go_Commerce/internal/domain/product"
 
 type CreateProductRequest struct {
-	SellerIDHeader int64 `header:"X-Seller-ID"`
-	Body           struct {
-		SellerID    int64   `json:"seller_id,omitempty"`
-		Name        string  `json:"name" minLength:"1"`
-		Description string  `json:"description,omitempty"`
-		Price       float64 `json:"price,omitempty" doc:"Price (plain number or in NPR)"`
-		UnitPrice   int64   `json:"unit_price,omitempty" doc:"Price in paisa"`
-		Stock       int     `json:"stock" minimum:"0"`
+	Body struct {
+		Name        string `json:"name" minLength:"1" doc:"Product name"`
+		Description string `json:"description,omitempty" doc:"Optional description"`
+		Price       int64  `json:"price" minimum:"1" doc:"Price in paisa (fixed money, e.g. 49950 = NPR 499.50)"`
+		Stock       int    `json:"stock" minimum:"0" doc:"Available stock"`
 	}
 }
 
@@ -25,22 +22,17 @@ type ListProductsRequest struct {
 }
 
 type UpdateProductRequest struct {
-	ID             int64 `path:"id" minimum:"1"`
-	SellerIDHeader int64 `header:"X-Seller-ID"`
-	Body           struct {
-		SellerID    int64    `json:"seller_id,omitempty"`
-		Name        *string  `json:"name,omitempty"`
-		Description *string  `json:"description,omitempty"`
-		Price       *float64 `json:"price,omitempty"`
-		UnitPrice   *int64   `json:"unit_price,omitempty"`
-		Stock       *int     `json:"stock,omitempty"`
+	ID   int64 `path:"id" minimum:"1" doc:"Product ID"`
+	Body struct {
+		Name        *string `json:"name,omitempty" doc:"New product name"`
+		Description *string `json:"description,omitempty" doc:"New description"`
+		Price       *int64  `json:"price,omitempty" minimum:"1" doc:"New price in paisa"`
+		Stock       *int    `json:"stock,omitempty" doc:"New stock"`
 	}
 }
 
 type DeleteProductRequest struct {
-	ID             int64 `path:"id" minimum:"1"`
-	SellerIDHeader int64 `header:"X-Seller-ID"`
-	SellerIDQuery  int64 `query:"seller_id"`
+	ID int64 `path:"id" minimum:"1" doc:"Product ID"`
 }
 
 type ProductResponse struct {

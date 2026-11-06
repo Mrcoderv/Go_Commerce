@@ -3,6 +3,7 @@ package buyer_test
 import (
 	"Go_Commerce/internal/core/buyer"
 	buyerdomain "Go_Commerce/internal/domain/buyer"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
 	"errors"
@@ -76,7 +77,7 @@ func (r *fakeBuyerRepo) Delete(ctx context.Context, id int64) error {
 
 func TestBuyerService_Register(t *testing.T) {
 	repo := newFakeBuyerRepo()
-	svc := buyer.NewBuyerService(repo)
+	svc := buyer.NewBuyerService(repo, logger.NewNop())
 	ctx := context.Background()
 
 	// 1. Success
@@ -114,7 +115,7 @@ func TestBuyerService_Register(t *testing.T) {
 
 func TestBuyerService_GetByID_NotFound(t *testing.T) {
 	repo := newFakeBuyerRepo()
-	svc := buyer.NewBuyerService(repo)
+	svc := buyer.NewBuyerService(repo, logger.NewNop())
 	ctx := context.Background()
 
 	_, err := svc.GetByID(ctx, 404)

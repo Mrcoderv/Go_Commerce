@@ -9,14 +9,14 @@ type CreateProductInput struct {
 	SellerID    int64
 	Name        string
 	Description string
-	Price       float64 // as-is
+	Price       int64 // paisa; fixed-point money
 	Stock       int
 }
 
 type UpdateProductInput struct {
 	Name        *string
 	Description *string
-	Price       *float64
+	Price       *int64 // paisa; fixed-point money
 	Stock       *int
 }
 
@@ -32,6 +32,4 @@ type ProductService interface {
 	List(ctx context.Context, f ProductFilter) ([]product.Product, error)
 	Update(ctx context.Context, id int64, sellerID int64, in UpdateProductInput) (product.Product, error)
 	Delete(ctx context.Context, id int64, sellerID int64) error
-	CheckAvailability(ctx context.Context, productID int64, qty int) (product.Product, error)
-	ReduceStock(ctx context.Context, productID int64, qty int) error
 }

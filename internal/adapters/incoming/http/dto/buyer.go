@@ -23,9 +23,9 @@ type ListBuyersRequest struct {
 type UpdateBuyerRequest struct {
 	ID   int64 `path:"id" minimum:"1"`
 	Body struct {
-		Name    string `json:"name,omitempty"`
-		Phone   string `json:"phone,omitempty"`
-		Address string `json:"address,omitempty"`
+		Name    *string `json:"name,omitempty" doc:"New name"`
+		Phone   *string `json:"phone,omitempty" doc:"New phone"`
+		Address *string `json:"address,omitempty" doc:"New address"`
 	}
 }
 

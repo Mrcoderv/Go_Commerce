@@ -54,19 +54,3 @@ func (r *UserRepository) GetByEmailAndRole(ctx context.Context, email string, ro
 	}
 	return u, nil
 }
-
-func (r *UserRepository) GetByID(ctx context.Context, id int64) (auth.User, error) {
-	const q = `SELECT id, email, password_hash, role, seller_id, buyer_id, created_at
-	           FROM users WHERE id=$1`
-	var u auth.User
-	err := postgres.Querier(ctx, r.db).
-		QueryRowContext(ctx, q, id).
-		Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.SellerID, &u.BuyerID, &u.CreatedAt)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return auth.User{}, auth.ErrNotFound
-		}
-		return auth.User{}, fmt.Errorf("get user: %w", err)
-	}
-	return u, nil
-}

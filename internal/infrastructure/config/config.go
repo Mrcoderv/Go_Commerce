@@ -15,7 +15,6 @@ type Config struct {
 	AppEnv    string
 	AppPort   int
 	LogLevel  string
-	TestDBURL string
 	JWTSecret string
 
 	DBHost     string
@@ -80,7 +79,6 @@ func Load() (*Config, error) {
 		AppEnv:     getString("APP_ENV", "development"),
 		AppPort:    appPort,
 		LogLevel:   getString("LOG_LEVEL", "info"),
-		TestDBURL:  getString("TEST_DATABASE_URL", ""),
 		JWTSecret:  getString("JWT_SECRET", "dev-secret-change-me"),
 		DBHost:     getString("DB_HOST", "localhost"),
 		DBPort:     dbPort,

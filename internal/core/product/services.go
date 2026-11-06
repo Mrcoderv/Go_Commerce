@@ -2,6 +2,7 @@ package product
 
 import (
 	"Go_Commerce/internal/domain/product"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"Go_Commerce/internal/ports/outgoing"
 	"context"
@@ -10,10 +11,11 @@ import (
 
 type ProductService struct {
 	repo outgoing.ProductRepository
+	log  logger.Logger
 }
 
-func NewProductService(repo outgoing.ProductRepository) incoming.ProductService {
-	return &ProductService{repo: repo}
+func NewProductService(repo outgoing.ProductRepository, log logger.Logger) incoming.ProductService {
+	return &ProductService{repo: repo, log: log}
 }
 
 var _ incoming.ProductService = (*ProductService)(nil)
@@ -42,34 +44,19 @@ func (s *ProductService) Create(ctx context.Context, in incoming.CreateProductIn
 		return product.Product{}, product.ErrInvalidInput
 	}
 
-	return s.repo.Create(ctx, product.Product{
+	created, err := s.repo.Create(ctx, product.Product{
 		SellerID:    in.SellerID,
 		Name:        name,
 		Description: strings.TrimSpace(in.Description),
 		Price:       in.Price,
 		Stock:       in.Stock,
 	})
-}
-
-func (s *ProductService) CheckAvailability(ctx context.Context, productID int64, qty int) (product.Product, error) {
-	if qty <= 0 {
-		return product.Product{}, product.ErrInvalidInput
-	}
-	p, err := s.repo.GetByID(ctx, productID)
 	if err != nil {
+		s.log.Error("product create failed", "seller_id", in.SellerID, "error", err)
 		return product.Product{}, err
 	}
-	if p.Stock < qty {
-		return product.Product{}, product.ErrInsufficientStock
-	}
-	return p, nil
-}
-
-func (s *ProductService) ReduceStock(ctx context.Context, productID int64, qty int) error {
-	if qty <= 0 {
-		return product.ErrInvalidInput
-	}
-	return s.repo.DecreaseStock(ctx, productID, qty)
+	s.log.Info("product created", "product_id", created.ID, "seller_id", created.SellerID, "price_paisa", created.Price)
+	return created, nil
 }
 
 func (s *ProductService) Update(ctx context.Context, id int64, sellerID int64, in incoming.UpdateProductInput) (product.Product, error) {
@@ -104,7 +91,13 @@ func (s *ProductService) Update(ctx context.Context, id int64, sellerID int64, i
 		current.Stock = *in.Stock
 	}
 
-	return s.repo.Update(ctx, current)
+	updated, err := s.repo.Update(ctx, current)
+	if err != nil {
+		s.log.Error("product update failed", "product_id", id, "seller_id", sellerID, "error", err)
+		return product.Product{}, err
+	}
+	s.log.Info("product updated", "product_id", id, "seller_id", sellerID)
+	return updated, nil
 }
 
 func (s *ProductService) Delete(ctx context.Context, id int64, sellerID int64) error {
@@ -115,5 +108,9 @@ func (s *ProductService) Delete(ctx context.Context, id int64, sellerID int64) e
 	if current.SellerID != sellerID {
 		return product.ErrForbidden
 	}
-	return s.repo.Delete(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+	s.log.Info("product deleted", "product_id", id, "seller_id", sellerID)
+	return nil
 }

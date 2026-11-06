@@ -4,16 +4,18 @@ import (
 	"Go_Commerce/internal/adapters/incoming/http/dto"
 	domainauth "Go_Commerce/internal/domain/auth"
 	"Go_Commerce/internal/domain/seller"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
 )
 
 type SellerHandler struct {
 	Service incoming.SellerService
+	log     logger.Logger
 }
 
-func NewSellerHandler(s incoming.SellerService) *SellerHandler {
-	return &SellerHandler{Service: s}
+func NewSellerHandler(s incoming.SellerService, log logger.Logger) *SellerHandler {
+	return &SellerHandler{Service: s, log: log}
 }
 
 func (h *SellerHandler) Register(ctx context.Context, req *dto.RegisterSellerRequest) (*dto.SellerResponse, error) {
@@ -24,7 +26,7 @@ func (h *SellerHandler) Register(ctx context.Context, req *dto.RegisterSellerReq
 		Address: req.Body.Address,
 	})
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	return &dto.SellerResponse{Body: out}, nil
 }
@@ -35,11 +37,11 @@ func (h *SellerHandler) GetByID(ctx context.Context, req *dto.GetSellerRequest) 
 		if err == nil {
 			err = domainauth.ErrForbidden
 		}
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	out, err := h.Service.GetByID(ctx, req.ID)
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	return &dto.SellerResponse{Body: out}, nil
 }
@@ -47,7 +49,7 @@ func (h *SellerHandler) GetByID(ctx context.Context, req *dto.GetSellerRequest) 
 func (h *SellerHandler) List(ctx context.Context, req *dto.ListSellersRequest) (*dto.ListSellersResponse, error) {
 	out, err := h.Service.List(ctx, incoming.ListFilter{Limit: req.Limit, Offset: req.Offset})
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	if out == nil {
 		out = []seller.Seller{}
@@ -61,7 +63,7 @@ func (h *SellerHandler) Update(ctx context.Context, req *dto.UpdateSellerRequest
 		if err == nil {
 			err = domainauth.ErrForbidden
 		}
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	out, err := h.Service.Update(ctx, req.ID, incoming.UpdateSellerInput{
 		Name:    req.Body.Name,
@@ -70,7 +72,7 @@ func (h *SellerHandler) Update(ctx context.Context, req *dto.UpdateSellerRequest
 		Address: req.Body.Address,
 	})
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	return &dto.SellerResponse{Body: out}, nil
 }
@@ -81,10 +83,10 @@ func (h *SellerHandler) Delete(ctx context.Context, req *dto.DeleteSellerRequest
 		if err == nil {
 			err = domainauth.ErrForbidden
 		}
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	if err := h.Service.Delete(ctx, req.ID); err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	return nil, nil
 }

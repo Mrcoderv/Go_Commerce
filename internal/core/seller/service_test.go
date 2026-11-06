@@ -3,6 +3,7 @@ package seller_test
 import (
 	"Go_Commerce/internal/core/seller"
 	sellerdomain "Go_Commerce/internal/domain/seller"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
 	"errors"
@@ -76,7 +77,7 @@ func (r *fakeSellerRepo) List(ctx context.Context, limit, offset int) ([]sellerd
 
 func TestSellerService_Register(t *testing.T) {
 	repo := newFakeSellerRepo()
-	svc := seller.NewSellerService(repo)
+	svc := seller.NewSellerService(repo, logger.NewNop())
 	ctx := context.Background()
 
 	// 1. Success
@@ -114,7 +115,7 @@ func TestSellerService_Register(t *testing.T) {
 
 func TestSellerService_GetByID_NotFound(t *testing.T) {
 	repo := newFakeSellerRepo()
-	svc := seller.NewSellerService(repo)
+	svc := seller.NewSellerService(repo, logger.NewNop())
 	ctx := context.Background()
 
 	_, err := svc.GetByID(ctx, 999)

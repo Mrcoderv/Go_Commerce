@@ -2,16 +2,18 @@ package handlers
 
 import (
 	"Go_Commerce/internal/adapters/incoming/http/dto"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
 )
 
 type AuthHandler struct {
 	svc incoming.AuthService
+	log logger.Logger
 }
 
-func NewAuthHandler(svc incoming.AuthService) *AuthHandler {
-	return &AuthHandler{svc: svc}
+func NewAuthHandler(svc incoming.AuthService, log logger.Logger) *AuthHandler {
+	return &AuthHandler{svc: svc, log: log}
 }
 
 func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterAuthRequest) (*dto.AuthResponse, error) {
@@ -24,7 +26,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterAuthRequest
 		Address:  req.Body.Address,
 	})
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	var out dto.AuthResponse
 	out.Body.Token = res.Token
@@ -39,7 +41,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginAuthRequest) (*dt
 		Role:     req.Body.Role,
 	})
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	var out dto.AuthResponse
 	out.Body.Token = res.Token

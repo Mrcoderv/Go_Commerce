@@ -5,12 +5,6 @@ import (
 	"context"
 )
 
-type ProductFilter struct {
-	SellerID *int64
-	Limit    int
-	Offset   int
-}
-
 type ProductRepository interface {
 	Create(ctx context.Context, p product.Product) (product.Product, error)
 	GetByID(ctx context.Context, id int64) (product.Product, error)

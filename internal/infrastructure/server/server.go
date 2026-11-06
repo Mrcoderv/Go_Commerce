@@ -1,11 +1,13 @@
 package server
 
 import (
-	"Go_Commerce/internal/infrastructure/config"
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	nethttp "net/http"
+
+	"Go_Commerce/internal/infrastructure/config"
+	"Go_Commerce/internal/infrastructure/logger"
 
 	"go.uber.org/fx"
 )
@@ -14,6 +16,7 @@ func NewServer(
 	lc fx.Lifecycle,
 	cfg *config.Config,
 	handler nethttp.Handler,
+	log logger.Logger,
 ) *nethttp.Server {
 
 	srv := &nethttp.Server{
@@ -23,10 +26,11 @@ func NewServer(
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
+			log.Info("starting http server", "addr", srv.Addr, "env", cfg.AppEnv)
 			go func() {
 				if err := srv.ListenAndServe(); err != nil &&
-					err != nethttp.ErrServerClosed {
-					log.Printf("HTTP server error: %v", err)
+					!errors.Is(err, nethttp.ErrServerClosed) {
+					log.Error("http server error", "error", err)
 				}
 			}()
 
@@ -34,6 +38,7 @@ func NewServer(
 		},
 
 		OnStop: func(ctx context.Context) error {
+			log.Info("shutting down http server", "addr", srv.Addr)
 			return srv.Shutdown(ctx)
 		},
 	})

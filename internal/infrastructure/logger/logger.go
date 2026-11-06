@@ -66,6 +66,19 @@ type Logger interface {
 
 var _ Logger = (*sloglogger)(nil) // checking the import and throwing error if not implemented
 
+// nopLogger discards everything. Useful in unit tests.
+type nopLogger struct{}
+
+func (nopLogger) Info(string, ...any)  {}
+func (nopLogger) Warn(string, ...any)  {}
+func (nopLogger) Error(string, ...any) {}
+func (nopLogger) Debug(string, ...any) {}
+
+// NewNop returns a Logger that discards all entries.
+func NewNop() Logger {
+	return nopLogger{}
+}
+
 /// here  i have make the logger interface
 // so that that has the diffrent behaviour and
 // then as per the behnaviour we define the method for each lloger  in the env life the

@@ -8,6 +8,7 @@ import (
 	"Go_Commerce/internal/core/product"
 	"Go_Commerce/internal/core/seller"
 	orderdomain "Go_Commerce/internal/domain/order"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"Go_Commerce/migrations"
 	"context"
@@ -42,16 +43,16 @@ func TestOrderFlow_Integration(t *testing.T) {
 	}
 
 	// Setup adapters and core services
-	txManager := postgres.NewTxManager(sqlDB)
+	txManager := postgres.NewTxManager(sqlDB, logger.NewNop())
 	sellerRepo := repositories.NewSellerRepository(sqlDB)
 	productRepo := repositories.NewProductRepository(sqlDB)
 	buyerRepo := repositories.NewBuyerRepository(sqlDB)
 	orderRepo := repositories.NewOrderRepository(sqlDB)
 
-	sellerSvc := seller.NewSellerService(sellerRepo)
-	productSvc := product.NewProductService(productRepo)
-	buyerSvc := buyer.NewBuyerService(buyerRepo)
-	orderSvc := order.NewOrderService(orderRepo, buyerRepo, productRepo, txManager)
+	sellerSvc := seller.NewSellerService(sellerRepo, logger.NewNop())
+	productSvc := product.NewProductService(productRepo, logger.NewNop())
+	buyerSvc := buyer.NewBuyerService(buyerRepo, logger.NewNop())
+	orderSvc := order.NewOrderService(orderRepo, buyerRepo, productRepo, txManager, logger.NewNop())
 
 	now := time.Now().UnixNano()
 

@@ -3,6 +3,7 @@ package product_test
 import (
 	"Go_Commerce/internal/core/product"
 	productdomain "Go_Commerce/internal/domain/product"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
 	"errors"
@@ -87,7 +88,7 @@ func (r *fakeProductRepo) IncreaseStock(ctx context.Context, id int64, qty int) 
 
 func TestProductService_Create(t *testing.T) {
 	repo := newFakeProductRepo()
-	svc := product.NewProductService(repo)
+	svc := product.NewProductService(repo, logger.NewNop())
 	ctx := context.Background()
 
 	// 1. Success
@@ -127,7 +128,7 @@ func TestProductService_Create(t *testing.T) {
 
 func TestProductService_OwnershipForbidden(t *testing.T) {
 	repo := newFakeProductRepo()
-	svc := product.NewProductService(repo)
+	svc := product.NewProductService(repo, logger.NewNop())
 	ctx := context.Background()
 
 	p, err := svc.Create(ctx, incoming.CreateProductInput{
@@ -160,36 +161,5 @@ func TestProductService_OwnershipForbidden(t *testing.T) {
 	}
 	if updated.Name != "Hacked Keyboard" {
 		t.Errorf("expected name to be updated, got %s", updated.Name)
-	}
-}
-
-func TestProductService_StockOperations(t *testing.T) {
-	repo := newFakeProductRepo()
-	svc := product.NewProductService(repo)
-	ctx := context.Background()
-
-	p, _ := svc.Create(ctx, incoming.CreateProductInput{
-		SellerID: 1,
-		Name:     "Mouse",
-		Price:    2000,
-		Stock:    2,
-	})
-
-	// Check availability
-	_, err := svc.CheckAvailability(ctx, p.ID, 3)
-	if !errors.Is(err, productdomain.ErrInsufficientStock) {
-		t.Errorf("expected ErrInsufficientStock, got %v", err)
-	}
-
-	// Reduce stock successfully
-	err = svc.ReduceStock(ctx, p.ID, 2)
-	if err != nil {
-		t.Fatalf("reduce stock failed: %v", err)
-	}
-
-	// Reduce stock now fails
-	err = svc.ReduceStock(ctx, p.ID, 1)
-	if !errors.Is(err, productdomain.ErrInsufficientStock) {
-		t.Errorf("expected ErrInsufficientStock, got %v", err)
 	}
 }

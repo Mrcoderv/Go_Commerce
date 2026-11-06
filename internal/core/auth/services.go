@@ -11,6 +11,7 @@ import (
 	buyerdomain "Go_Commerce/internal/domain/buyer"
 	sellerdomain "Go_Commerce/internal/domain/seller"
 	"Go_Commerce/internal/infrastructure/config"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"Go_Commerce/internal/ports/outgoing"
 
@@ -32,6 +33,7 @@ type Service struct {
 	buyers  outgoing.BuyerRepository
 	tx      outgoing.TxManager
 	cfg     *config.Config
+	log     logger.Logger
 }
 
 func NewService(
@@ -40,8 +42,9 @@ func NewService(
 	buyers outgoing.BuyerRepository,
 	tx outgoing.TxManager,
 	cfg *config.Config,
+	log logger.Logger,
 ) incoming.AuthService {
-	return &Service{users: users, sellers: sellers, buyers: buyers, tx: tx, cfg: cfg}
+	return &Service{users: users, sellers: sellers, buyers: buyers, tx: tx, cfg: cfg, log: log}
 }
 
 func (s *Service) Register(ctx context.Context, in incoming.RegisterAuthInput) (incoming.AuthResult, error) {
@@ -58,6 +61,7 @@ func (s *Service) Register(ctx context.Context, in incoming.RegisterAuthInput) (
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
 	if err != nil {
+		s.log.Error("hash password failed", "error", err)
 		return incoming.AuthResult{}, fmt.Errorf("hash password: %w", err)
 	}
 
@@ -92,11 +96,15 @@ func (s *Service) Register(ctx context.Context, in incoming.RegisterAuthInput) (
 		return nil
 	})
 	if err != nil {
+		s.log.Warn("registration failed", "email", email, "role", in.Role, "error", err)
 		return incoming.AuthResult{}, err
 	}
 
+	s.log.Info("user registered", "user_id", user.ID, "role", user.Role)
+
 	token, err := s.sign(user)
 	if err != nil {
+		s.log.Error("sign token failed", "user_id", user.ID, "error", err)
 		return incoming.AuthResult{}, err
 	}
 	return incoming.AuthResult{Token: token, User: user}, nil
@@ -113,15 +121,22 @@ func (s *Service) Login(ctx context.Context, in incoming.LoginInput) (incoming.A
 	u, err := s.users.GetByEmailAndRole(ctx, email, in.Role)
 	if err != nil {
 		if err == auth.ErrNotFound {
+			s.log.Warn("login failed", "email", email, "role", in.Role, "reason", "user not found")
 			return incoming.AuthResult{}, auth.ErrInvalidCreds
 		}
+		s.log.Error("login lookup failed", "email", email, "role", in.Role, "error", err)
 		return incoming.AuthResult{}, err
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(in.Password)); err != nil {
+		s.log.Warn("login failed", "email", email, "role", in.Role, "reason", "invalid password")
 		return incoming.AuthResult{}, auth.ErrInvalidCreds
 	}
+
+	s.log.Info("user logged in", "user_id", u.ID, "role", u.Role)
+
 	token, err := s.sign(u)
 	if err != nil {
+		s.log.Error("sign token failed", "user_id", u.ID, "error", err)
 		return incoming.AuthResult{}, err
 	}
 	return incoming.AuthResult{Token: token, User: u}, nil

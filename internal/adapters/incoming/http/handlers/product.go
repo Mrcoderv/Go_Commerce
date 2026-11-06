@@ -2,33 +2,25 @@ package handlers
 
 import (
 	"Go_Commerce/internal/adapters/incoming/http/dto"
-	"Go_Commerce/internal/adapters/incoming/http/middleware"
-	domainauth "Go_Commerce/internal/domain/auth"
 	"Go_Commerce/internal/domain/product"
+	"Go_Commerce/internal/infrastructure/logger"
 	"Go_Commerce/internal/ports/incoming"
 	"context"
 )
 
 type ProductHandler struct {
 	Service incoming.ProductService
+	log     logger.Logger
 }
 
-func NewProductHandler(s incoming.ProductService) *ProductHandler {
-	return &ProductHandler{Service: s}
-}
-
-func sellerIDFromAuth(ctx context.Context) (int64, bool) {
-	c, ok := middleware.ClaimsFromContext(ctx)
-	if !ok || c.Role != domainauth.RoleSeller || c.SellerID == nil {
-		return 0, false
-	}
-	return *c.SellerID, true
+func NewProductHandler(s incoming.ProductService, log logger.Logger) *ProductHandler {
+	return &ProductHandler{Service: s, log: log}
 }
 
 func (h *ProductHandler) Create(ctx context.Context, req *dto.CreateProductRequest) (*dto.ProductResponse, error) {
 	claims, err := sellerClaims(ctx)
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 
 	out, err := h.Service.Create(ctx, incoming.CreateProductInput{
@@ -39,7 +31,7 @@ func (h *ProductHandler) Create(ctx context.Context, req *dto.CreateProductReque
 		Stock:       req.Body.Stock,
 	})
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	return &dto.ProductResponse{Body: out}, nil
 }
@@ -47,7 +39,7 @@ func (h *ProductHandler) Create(ctx context.Context, req *dto.CreateProductReque
 func (h *ProductHandler) GetByID(ctx context.Context, req *dto.GetProductRequest) (*dto.ProductResponse, error) {
 	out, err := h.Service.GetByID(ctx, req.ID)
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	return &dto.ProductResponse{Body: out}, nil
 }
@@ -63,7 +55,7 @@ func (h *ProductHandler) List(ctx context.Context, req *dto.ListProductsRequest)
 		Offset:   req.Offset,
 	})
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	if out == nil {
 		out = []product.Product{}
@@ -74,23 +66,17 @@ func (h *ProductHandler) List(ctx context.Context, req *dto.ListProductsRequest)
 func (h *ProductHandler) Update(ctx context.Context, req *dto.UpdateProductRequest) (*dto.ProductResponse, error) {
 	claims, err := sellerClaims(ctx)
 	if err != nil {
-		return nil, MapError(err)
-	}
-
-	var priceInPaisa *float64
-	if req.Body.Price != nil {
-		p := *req.Body.Price
-		priceInPaisa = &p
+		return nil, MapError(h.log, err)
 	}
 
 	out, err := h.Service.Update(ctx, req.ID, *claims.SellerID, incoming.UpdateProductInput{
 		Name:        req.Body.Name,
 		Description: req.Body.Description,
-		Price:       priceInPaisa,
+		Price:       req.Body.Price,
 		Stock:       req.Body.Stock,
 	})
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	return &dto.ProductResponse{Body: out}, nil
 }
@@ -98,10 +84,10 @@ func (h *ProductHandler) Update(ctx context.Context, req *dto.UpdateProductReque
 func (h *ProductHandler) Delete(ctx context.Context, req *dto.DeleteProductRequest) (*struct{}, error) {
 	claims, err := sellerClaims(ctx)
 	if err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	if err := h.Service.Delete(ctx, req.ID, *claims.SellerID); err != nil {
-		return nil, MapError(err)
+		return nil, MapError(h.log, err)
 	}
 	return nil, nil
 }
